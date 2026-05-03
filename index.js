@@ -1,46 +1,41 @@
+const config = require('config');
 const express = require('express');
-const mongoose = require('mongoose'); 
+const mongoose = require('mongoose');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const users = require('./routes/users'); // ملف الـ Routes بتاع اليوزرز
+const auth = require('./routes/auth'); // فكي الكومنت لما تعملي ملف الـ Login
 
 const app = express();
-const port = 5000;
 
-// 1. الربط بالداتابيز
-const dbURI = 'mongodb+srv://shahdessam112233_db_user:DzPc2MbkIvnjIg8j@cluster0.4pbf0y2.mongodb.net/testDatabase?retryWrites=true&w=majority';
+// 1. التأكد من وجود الـ Private Key للأمان (الخطوة اللي موش عملها)
+if (!config.get('jwtPrivateKey')) {
+    console.error('FATAL ERROR: jwtPrivateKey is not defined.');
+    process.exit(1);
+}
 
+// 2. الاتصال بالداتابيز (غيرنا الاسم لـ flowio عشان داتا المشروع تكون منفصلة)
+const dbURI = 'mongodb+srv://shahdessam112233_db_user:shahdessam123456@cluster0.4pbf0y2.mongodb.net/flowio?retryWrites=true&w=majority';
 mongoose.connect(dbURI)
-  .then(() => console.log('Connected to MongoDB Atlas! 🚀'))
-  .catch((err) => console.log('DB Connection Error: ', err));
+  .then(() => console.log('Connected to Flowio MongoDB Atlas! 🚀'))
+  .catch((err) => console.log('DB Connection Error: ', err.message));
 
-// 2. تعريف الـ Schema والـ Model (لازم يبقوا فوق)
-const userSchema = new mongoose.Schema({
-    name: String,
-    age: Number,
-    email: String
-});
-const User = mongoose.model('User', userSchema);
+// 3. Middlewares
+app.use(express.json()); // مهم جداً عشان يقرأ الداتا اللي بتبعتيها في الـ Postman
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
+app.use(helmet());
+app.use('/api/users', users);
+app.use('/api/auth', auth); // فك الكومنت لما تعملي ملف الـ Login
+app.use('/api/communities', require('./routes/communities'));
 
-// 3. المسارات (Routes)
-app.get('/', (req, res) => {
-  res.send('Welcome to my first Node.js Server! 🚀');
-});
+if (app.get('env') === 'development') {
+    app.use(morgan('tiny'));
+    console.log('Morgan enabled...');
+}
 
-app.get('/add-user', async (req, res) => {
-    try {
-        const newUser = new User({
-            name: "Shahd Essam",
-            age: 22,
-            email: "shahd@example.com"
-        });
+// 4. الـ Routes (توجيه الطلبات لملفاتها)
+app.use('/api/users', users); // أي طلب لـ /api/users هيروح لملف الـ routes/users.js
 
-        await newUser.save(); 
-        res.send('User added to Database successfully! 💎');
-    } catch (error) {
-        res.status(500).send('Error adding user: ' + error);
-    }
-});
-
-// 4. تشغيل السيرفر (لازم يكون آخر حاجة تحت خالص)
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
-});
-
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Flowio Server listening on port ${port}...`));
