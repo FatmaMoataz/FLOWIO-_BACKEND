@@ -1,0 +1,7 @@
+{
+    "name":"FLOWIO_production",
+    "mail":{
+        "host":"prod_mail_server"
+    }
+
+}

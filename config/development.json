@@ -1,0 +1,7 @@
+{
+    "name":"FLOWIO_development",
+    "mail":{
+        "host":"dev_mail_server"
+    }
+
+}
