@@ -29,6 +29,7 @@ app.use('/api/users', users);
 app.use('/api/auth', auth); // فك الكومنت لما تعملي ملف الـ Login
 app.use('/api/invitations', require('./routes/invitations'));
 app.use('/api/communities', require('./routes/communities'));
+app.use('/api/companies', require('./routes/companies'));
 
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
