@@ -1,4 +1,4 @@
 {
-    "name":"FLOWIO"
-    
+    "name":"FLOWIO",
+    "jwtPrivateKey": "your-secret-jwt-key-change-in-production"
 }
