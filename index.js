@@ -7,8 +7,7 @@ const morgan = require('morgan');
 const users = require('./routes/users'); // ملف الـ Routes بتاع اليوزرز
 const auth = require('./routes/auth'); // فكي الكومنت لما تعملي ملف الـ Login
 const app = express();
-
-// 1. التأكد من وجود الـ Private Key للأمان
+// التأكد من وجود الـ Private Key للأمان
 try {
     const jwtKey = config.get('jwtPrivateKey');
     if (!jwtKey) {
@@ -26,23 +25,37 @@ mongoose.connect(dbURI)
   .catch((err) => console.log('DB Connection Error: ', err.message));
 require('./models/user');
 require('./models/epic');
-require('./models/task');
+require('./models/company'); // Temporarily disabled
+require('./models/invitation');
+// With your other model requires
+require('./models/project.model');
+// With your other model requires
+require('./models/task.model');
+
 // 3. Middlewares
 app.use(express.json()); // مهم جداً عشان يقرأ الداتا اللي بتبعتيها في الـ Postman
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use(helmet());
+
+// Routes
+app.get('/test-me', (req, res) => {
+    res.send('Everything is OK!');
+});
+
 app.use('/api/users', users);
 app.use('/api/auth', auth); // فك الكومنت لما تعملي ملف الـ Login
+app.use('/api/companies', require('./routes/companies'));
 app.use('/api/communities', require('./routes/communities.js'));
 app.use('/api/epics', require('./routes/epicRoutes.js'));
-app.use('/api/tasks', require('./routes/taskRoutes.js'));
-
-
+app.use('/api/invitations', require('./routes/invitations'));
+// With your other route mounts
+app.use('/api/projects', require('./routes/projects/project.routes'));
+app.use('/api/projects/:projectId/tasks', require('./routes/tasks/task.routes'));
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
     console.log('Morgan enabled...');
 }
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4000;
 app.listen(port, () => console.log(`Flowio Server listening on port ${port}...`));

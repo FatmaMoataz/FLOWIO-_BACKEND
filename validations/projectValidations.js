@@ -72,6 +72,15 @@ const validateCreateTask = (data) => {
       .messages({
         'string.pattern.name': 'columnId must be a valid MongoDB ObjectId.',
       }),
+
+      // --- هنا الـ companyId إجباري عند الكرنية ---
+    companyId: Joi.string()
+      .pattern(/^[0-9a-fA-F]{24}$/, 'ObjectId')
+      .required() 
+      .messages({
+        'string.pattern.name': 'companyId must be a valid MongoDB ObjectId.',
+        'any.required': 'companyId is required to create a task.',
+      }),
   });
 
   return schema.validate(data, { abortEarly: false });
