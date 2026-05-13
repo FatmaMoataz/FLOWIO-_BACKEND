@@ -8,6 +8,7 @@ const users = require('./routes/users'); // ملف الـ Routes بتاع الي
 const auth = require('./routes/auth'); // فكي الكومنت لما تعملي ملف الـ Login
 const posts = require('./routes/post'); // ملف الـ Routes بتاع البوستات
 const polls = require('./routes/poll'); // ملف الـ Routes بتاع الاستفتاءات
+const notifications = require('./routes/notifications'); // ملف الـ Routes بتاع الإشعارات
 const cors = require('cors');
 
 app.use(cors()); // تمكين CORS للسماح بالطلبات من الواجهة الأمامية
@@ -34,6 +35,9 @@ require('./models/epic');
 require('./models/company'); // Temporarily disabled
 require('./models/invitation');
 require('./models/post');
+require('./models/poll');
+require('./models/pollVote');
+require('./models/notification');
 // With your other model requires
 require('./models/project.model');
 // With your other model requires
@@ -57,7 +61,8 @@ app.use('/api/communities', require('./routes/communities.js'));
 app.use('/api/epics', require('./routes/epicRoutes.js'));
 app.use('/api/invitations', require('./routes/invitations'));
 app.use('/api/posts', require('./routes/posts/post'));
-app.use('/api/polls', polls);
+app.use('/api/polls', require('./routes/poll'));
+app.use('/api/notifications', require('./routes/notifications'));
 // With your other route mounts
 app.use('/api/projects', require('./routes/projects/project.routes'));
 app.use('/api/projects/:projectId/tasks', require('./routes/tasks/task.routes'));
