@@ -6,6 +6,11 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const users = require('./routes/users'); // ملف الـ Routes بتاع اليوزرز
 const auth = require('./routes/auth'); // فكي الكومنت لما تعملي ملف الـ Login
+const posts = require('./routes/post'); // ملف الـ Routes بتاع البوستات
+const cors = require('cors');
+
+app.use(cors()); // تمكين CORS للسماح بالطلبات من الواجهة الأمامية
+
 const app = express();
 // التأكد من وجود الـ Private Key للأمان
 try {
@@ -27,6 +32,7 @@ require('./models/user');
 require('./models/epic');
 require('./models/company'); // Temporarily disabled
 require('./models/invitation');
+require('./models/post');
 // With your other model requires
 require('./models/project.model');
 // With your other model requires
@@ -49,6 +55,7 @@ app.use('/api/companies', require('./routes/companies'));
 app.use('/api/communities', require('./routes/communities.js'));
 app.use('/api/epics', require('./routes/epicRoutes.js'));
 app.use('/api/invitations', require('./routes/invitations'));
+app.use('/api/posts', require('./routes/posts/post'));
 // With your other route mounts
 app.use('/api/projects', require('./routes/projects/project.routes'));
 app.use('/api/projects/:projectId/tasks', require('./routes/tasks/task.routes'));
