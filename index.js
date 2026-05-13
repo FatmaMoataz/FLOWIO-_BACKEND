@@ -7,6 +7,7 @@ const morgan = require('morgan');
 const users = require('./routes/users'); // ملف الـ Routes بتاع اليوزرز
 const auth = require('./routes/auth'); // فكي الكومنت لما تعملي ملف الـ Login
 const posts = require('./routes/post'); // ملف الـ Routes بتاع البوستات
+const polls = require('./routes/poll'); // ملف الـ Routes بتاع الاستفتاءات
 const cors = require('cors');
 
 app.use(cors()); // تمكين CORS للسماح بالطلبات من الواجهة الأمامية
@@ -56,6 +57,7 @@ app.use('/api/communities', require('./routes/communities.js'));
 app.use('/api/epics', require('./routes/epicRoutes.js'));
 app.use('/api/invitations', require('./routes/invitations'));
 app.use('/api/posts', require('./routes/posts/post'));
+app.use('/api/polls', polls);
 // With your other route mounts
 app.use('/api/projects', require('./routes/projects/project.routes'));
 app.use('/api/projects/:projectId/tasks', require('./routes/tasks/task.routes'));
