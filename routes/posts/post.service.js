@@ -1,7 +1,10 @@
-const Post = require("../../models/post");
+const Post = require("../../models/post.js");
+const Comment = require("../../models/comment.js");
 
 const createPostService = async (data) => {
   const post = await Post.create(data);
+
+  await post.populate("communityId userId pollId");
 
   return {
     success: true,
@@ -13,8 +16,15 @@ const createPostService = async (data) => {
 const getAllPostsService = async () => {
   const posts = await Post.find()
     .populate("communityId")
-    .populate("userId")
-    .populate("pollId");
+    .populate("userId", "username email")
+    .populate("pollId")
+    .populate({
+      path: "comments",
+      populate: {
+        path: "userId",
+        select: "username email"
+      }
+    });
 
   return {
     success: true,
@@ -26,8 +36,15 @@ const getAllPostsService = async () => {
 const getPostByIdService = async (id) => {
   const post = await Post.findById(id)
     .populate("communityId")
-    .populate("userId")
-    .populate("pollId");
+    .populate("userId", "username email")
+    .populate("pollId")
+    .populate({
+      path: "comments",
+      populate: {
+        path: "userId",
+        select: "username email"
+      }
+    });
 
   if (!post) {
     return {
@@ -42,10 +59,8 @@ const getPostByIdService = async (id) => {
   };
 };
 
-const updatePostService = async (id, data) => {
-  const post = await Post.findByIdAndUpdate(id, data, {
-    new: true
-  });
+const updatePostService = async (id, data, userId) => {
+  const post = await Post.findById(id);
 
   if (!post) {
     return {
@@ -53,16 +68,31 @@ const updatePostService = async (id, data) => {
       message: "Post not found"
     };
   }
+
+  if (post.userId.toString() !== userId.toString()) {
+    return {
+      success: false,
+      message: "Unauthorized"
+    };
+  }
+
+  const updatedPost = await Post.findByIdAndUpdate(id, data, {
+    new: true,
+    runValidators: true
+  })
+    .populate("communityId")
+    .populate("userId")
+    .populate("pollId");
 
   return {
     success: true,
     message: "Post updated successfully",
-    data: post
+    data: updatedPost
   };
 };
 
-const deletePostService = async (id) => {
-  const post = await Post.findByIdAndDelete(id);
+const deletePostService = async (id, userId) => {
+  const post = await Post.findById(id);
 
   if (!post) {
     return {
@@ -71,9 +101,100 @@ const deletePostService = async (id) => {
     };
   }
 
+  if (post.userId.toString() !== userId.toString()) {
+    return {
+      success: false,
+      message: "Unauthorized"
+    };
+  }
+
+  await Post.findByIdAndDelete(id);
+
   return {
     success: true,
     message: "Post deleted successfully"
+  };
+};
+
+const likePostService = async (postId, userId) => {
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    return {
+      success: false,
+      message: "Post not found"
+    };
+  }
+
+  const alreadyLiked = post.likes.includes(userId);
+
+  if (alreadyLiked) {
+    return {
+      success: false,
+      message: "Post already liked"
+    };
+  }
+
+  post.likes.push(userId);
+
+  await post.save();
+
+  return {
+    success: true,
+    message: "Post liked successfully"
+  };
+};
+
+const unlikePostService = async (postId, userId) => {
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    return {
+      success: false,
+      message: "Post not found"
+    };
+  }
+
+  post.likes = post.likes.filter(
+    (id) => id.toString() !== userId.toString()
+  );
+
+  await post.save();
+
+  return {
+    success: true,
+    message: "Post unliked successfully"
+  };
+};
+
+const addCommentService = async (
+  postId,
+  userId,
+  content
+) => {
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    return {
+      success: false,
+      message: "Post not found"
+    };
+  }
+
+  const comment = await Comment.create({
+    content,
+    userId,
+    postId
+  });
+
+  post.comments.push(comment._id);
+
+  await post.save();
+
+  return {
+    success: true,
+    message: "Comment added successfully",
+    data: comment
   };
 };
 
@@ -82,5 +203,8 @@ module.exports = {
   getAllPostsService,
   getPostByIdService,
   updatePostService,
-  deletePostService
+  deletePostService,
+  likePostService,
+  unlikePostService,
+  addCommentService
 };

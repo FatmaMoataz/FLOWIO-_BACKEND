@@ -7,11 +7,7 @@ const createPostSchema = Joi.object({
 
   communityId: Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
-    .optional(),
-
-  userId: Joi.string()
-    .pattern(/^[0-9a-fA-F]{24}$/)
-    .optional(),
+    .required(),
 
   pollId: Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
@@ -23,18 +19,10 @@ const updatePostSchema = Joi.object({
 
   is_pinned: Joi.boolean(),
 
-  communityId: Joi.string()
-    .pattern(/^[0-9a-fA-F]{24}$/)
-    .optional(),
+  communityId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/),
 
-  userId: Joi.string()
-    .pattern(/^[0-9a-fA-F]{24}$/)
-    .optional(),
-
-  pollId: Joi.string()
-    .pattern(/^[0-9a-fA-F]{24}$/)
-    .optional()
-});
+  pollId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/)
+}).min(1);
 
 const idParamSchema = Joi.object({
   id: Joi.string()
@@ -42,8 +30,13 @@ const idParamSchema = Joi.object({
     .required()
 });
 
+const commentSchema = Joi.object({
+  content: Joi.string().min(1).max(200).required()
+});
+
 module.exports = {
   createPostSchema,
   updatePostSchema,
-  idParamSchema
+  idParamSchema,
+  commentSchema
 };

@@ -6,33 +6,49 @@ const postSchema = new mongoose.Schema(
       type: String,
       required: true,
       minLength: [1, "Post content must be at least 1 character long"],
-      maxLength: [300, "Post content cannot exceed 300 characters"],
+      maxLength: [300, "Post content cannot exceed 300 characters"]
     },
+
+    likes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+      }
+    ],
+
+    comments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Comment"
+      }
+    ],
 
     is_pinned: {
       type: Boolean,
-      default: false,
+      default: false
     },
 
     communityId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Community",
+      required: true
     },
 
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true
     },
 
     pollId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Poll",
-    },
+      ref: "Poll"
+    }
   },
   {
     timestamps: true,
-    toObject: { virtuals: true },
     toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
 

@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const users = require('./routes/users'); // ملف الـ Routes بتاع اليوزرز
 const auth = require('./routes/auth'); // فكي الكومنت لما تعملي ملف الـ Login
-const posts = require('./routes/post'); // ملف الـ Routes بتاع البوستات
+const posts = require('./routes/posts'); // ملف الـ Routes بتاع البوستات
 const polls = require('./routes/poll'); // ملف الـ Routes بتاع الاستفتاءات
 const notifications = require('./routes/notifications'); // ملف الـ Routes بتاع الإشعارات
 const cors = require('cors');
@@ -35,6 +35,7 @@ require('./models/epic');
 require('./models/company'); // Temporarily disabled
 require('./models/invitation');
 require('./models/post');
+require('./models/comment');
 require('./models/poll');
 require('./models/pollVote');
 require('./models/notification');
