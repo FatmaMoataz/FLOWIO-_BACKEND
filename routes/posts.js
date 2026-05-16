@@ -1,17 +1,17 @@
-import { Router } from "express";
+const express = require('express');
 
-import * as postController from "./posts/post.controller.js";
+const postController = require('./posts/post.controller');
 
-import { validate } from "../../middleware/validation.middleware.js";
+const { validate } = require('../middleware/validation.middleware');
 
-import {
+const {
   createPostSchema,
   updatePostSchema,
   idParamSchema,
   commentSchema
-} from "../../validations/postValidation.js";
+} = require('../validations/postValidation');
 
-const router = Router();
+const router = express.Router();
 
 router.post(
   "/",

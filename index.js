@@ -8,12 +8,11 @@ const users = require('./routes/users'); // ملف الـ Routes بتاع الي
 const auth = require('./routes/auth'); // فكي الكومنت لما تعملي ملف الـ Login
 const posts = require('./routes/posts'); // ملف الـ Routes بتاع البوستات
 const polls = require('./routes/poll'); // ملف الـ Routes بتاع الاستفتاءات
-const notifications = require('./routes/notifications'); // ملف الـ Routes بتاع الإشعارات
+const notifications = require('./routes/notification'); // ملف الـ Routes بتاع الإشعارات
 const cors = require('cors');
 
-app.use(cors()); // تمكين CORS للسماح بالطلبات من الواجهة الأمامية
-
 const app = express();
+app.use(cors()); // تمكين CORS للسماح بالطلبات من الواجهة الأمامية
 // التأكد من وجود الـ Private Key للأمان
 try {
     const jwtKey = config.get('jwtPrivateKey');
@@ -26,7 +25,11 @@ try {
 }
 
 // 2. الاتصال بالداتابيز (غيرنا الاسم لـ flowio عشان داتا المشروع تكون منفصلة)
-const dbURI = 'mongodb+srv://shahdessam112233_db_user:shahdessam123456@cluster0.4pbf0y2.mongodb.net/flowio?retryWrites=true&w=majority';
+const dbURI = process.env.DB_URI;
+if (!dbURI) {
+    console.error('FATAL ERROR: DB_URI is not defined. Add DB_URI to your .env file.');
+    process.exit(1);
+}
 mongoose.connect(dbURI)
   .then(() => console.log('Connected to Flowio MongoDB Atlas! 🚀'))
   .catch((err) => console.log('DB Connection Error: ', err.message));
@@ -61,9 +64,9 @@ app.use('/api/companies', require('./routes/companies'));
 app.use('/api/communities', require('./routes/communities.js'));
 app.use('/api/epics', require('./routes/epicRoutes.js'));
 app.use('/api/invitations', require('./routes/invitations'));
-app.use('/api/posts', require('./routes/posts/post'));
+app.use('/api/posts', posts);
 app.use('/api/polls', require('./routes/poll'));
-app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/notifications', notifications);
 // With your other route mounts
 app.use('/api/projects', require('./routes/projects/project.routes'));
 app.use('/api/projects/:projectId/tasks', require('./routes/tasks/task.routes'));
