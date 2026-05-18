@@ -2,7 +2,7 @@ const { Task } = require('../../models/task.model');
 
 // ── Shared populate config ─────────────────────────────────────────────────────
 const TASK_POPULATE = [
-    { path: 'assignedTo', select: 'name email' },
+    { path: 'assignedTo', select: 'name email specialization' },
     { path: 'projectId',  select: 'name status' }
 ];
 
@@ -10,23 +10,33 @@ const TASK_POPULATE = [
 
 const createTaskService = async (data) => {
     const task = await Task.create(data);
-    // Populate after creation so the response is immediately useful to the frontend
     return await task.populate(TASK_POPULATE);
 };
 
-// ── Read ───────────────────────────────────────────────────────────────────────
+// ── Get All Tasks for a Project (with optional filters) ────────────────────────
 
-const getAllTasksByProjectService = async (projectId) => {
-    return await Task.find({ projectId })
+const getAllTasksByProjectService = async (projectId, filters = {}) => {
+    const query = { projectId, ...filters };
+    return await Task.find(query)
         .populate(TASK_POPULATE)
-        .sort({ createdAt: -1 }); // newest first
+        .sort({ createdAt: -1 });
 };
+
+// ── Get Tasks by any filter (used for my-tasks) ────────────────────────────────
+
+const getTasksByFilterService = async (filters = {}) => {
+    return await Task.find(filters)
+        .populate(TASK_POPULATE)
+        .sort({ createdAt: -1 });
+};
+
+// ── Get Single Task ────────────────────────────────────────────────────────────
 
 const getTaskByIdService = async (id) => {
     return await Task.findById(id).populate(TASK_POPULATE);
 };
 
-// ── Update ─────────────────────────────────────────────────────────────────────
+// ── Update Task ────────────────────────────────────────────────────────────────
 
 const updateTaskService = async (id, data) => {
     return await Task.findByIdAndUpdate(
@@ -36,7 +46,7 @@ const updateTaskService = async (id, data) => {
     ).populate(TASK_POPULATE);
 };
 
-// ── Delete ─────────────────────────────────────────────────────────────────────
+// ── Delete Task ────────────────────────────────────────────────────────────────
 
 const deleteTaskService = async (id) => {
     return await Task.findByIdAndDelete(id);
@@ -45,6 +55,7 @@ const deleteTaskService = async (id) => {
 module.exports = {
     createTaskService,
     getAllTasksByProjectService,
+    getTasksByFilterService,
     getTaskByIdService,
     updateTaskService,
     deleteTaskService

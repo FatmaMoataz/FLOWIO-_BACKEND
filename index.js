@@ -18,8 +18,7 @@ try {
     process.exit(1);
 }
 
-// 2. الاتصال بالداتابيز (غيرنا الاسم لـ flowio عشان داتا المشروع تكون منفصلة)
-const dbURI = 'mongodb+srv://shahdessam112233_db_user:shahdessam123456@cluster0.4pbf0y2.mongodb.net/flowio?retryWrites=true&w=majority';
+const dbURI = process.env.MONGODB_URI; 
 mongoose.connect(dbURI)
   .then(() => console.log('Connected to Flowio MongoDB Atlas! 🚀'))
   .catch((err) => console.log('DB Connection Error: ', err.message));
@@ -31,6 +30,15 @@ require('./models/invitation');
 require('./models/project.model');
 // With your other model requires
 require('./models/task.model');
+require('./models/projectMember.model');
+require('./models/team.model');
+require('./models/teamMember.model');
+require('./models/fileAttachment.model');
+require('./models/activityLog.model');
+require('./models/meeting.model');
+require('./models/meetingLog.model');
+require('./models/refreshToken.model');
+require('./models/board.model');
 
 // 3. Middlewares
 app.use(express.json()); // مهم جداً عشان يقرأ الداتا اللي بتبعتيها في الـ Postman
@@ -52,6 +60,14 @@ app.use('/api/invitations', require('./routes/invitations'));
 // With your other route mounts
 app.use('/api/projects', require('./routes/projects/project.routes'));
 app.use('/api/projects/:projectId/tasks', require('./routes/tasks/task.routes'));
+app.use('/api/tasks', require('./routes/tasks/task.routes'));
+app.use('/api/projects/:projectId/members', require('./routes/projectMembers/projectMember.routes'));
+app.use('/api/teams', require('./routes/teams/team.routes'));
+app.use('/api/files',    require('./routes/files/fileAttachment.routes'));
+app.use('/api/activity', require('./routes/activityLogs/activityLog.routes'));
+app.use('/api/meetings', require('./routes/meetings/meeting.routes'));
+app.use('/api/boards', require('./routes/boards/board.routes'));
+
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
     console.log('Morgan enabled...');

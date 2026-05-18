@@ -1,24 +1,49 @@
-const jwt = require('jsonwebtoken');
-const config = require('config');
+const { verifyAccessToken } = require('../utils/tokenUtils');
 
-module.exports = function (req, res, next) {
-  // 1. نجيب الـ Token من الـ Header
-  const token = req.header('x-auth-token');
-  
-  // 2. لو مفيش Token، نرفض الدخول (401 Unauthorized)
-  if (!token) return res.status(401).send('Access denied. No token provided.');
+/**
+ * Auth Middleware — updated for Access Token / Refresh Token system
+ *
+ * Reads the Authorization header:
+ *   Authorization: Bearer <accessToken>
+ *
+ * Falls back to x-auth-token header for backward compatibility
+ * with your existing Thunder Client tests.
+ */
+module.exports = function auth(req, res, next) {
+    // Support both Authorization: Bearer <token> and legacy x-auth-token header
+    let token = null;
 
-  try {
-    // 3. نتأكد إن الـ Token سليم ومقري بالمفتاح السري بتاعنا
-    const decoded = jwt.verify(token, config.get('jwtPrivateKey'));
-    
-    // 4. نخزن بيانات اليوزر (اللي فكيناها من الـ Token) في الـ req عشان الـ Routes التانية تستخدمها
-    req.user = decoded; 
-    
-    // 5. انقل للوظيفة اللي بعدي (الـ Route الأصلي)
-    next();
-  } catch (ex) {
-    // 6. لو الـ Token غلط أو منتهي الصلاحية (400 Bad Request)
-    res.status(400).send('Invalid token.');
-  }
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    } else if (req.headers['x-auth-token']) {
+        token = req.headers['x-auth-token'];
+    }
+
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: 'Access denied. No token provided.'
+        });
+    }
+
+    try {
+        const decoded = verifyAccessToken(token);
+        req.user = decoded; // { _id, role, email, iat, exp }
+        next();
+    } catch (err) {
+        // Distinguish between expired and invalid for better frontend UX
+        if (err.name === 'TokenExpiredError') {
+            return res.status(401).json({
+                success: false,
+                message: 'Access token expired. Please refresh.',
+                code: 'TOKEN_EXPIRED' // frontend checks this to trigger /refresh
+            });
+        }
+
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid token.'
+        });
+    }
 };

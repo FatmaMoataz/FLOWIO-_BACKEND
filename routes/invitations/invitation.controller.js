@@ -122,10 +122,26 @@ const deleteInvitation = async (req, res) => {
   }
 };
 
+// GET /api/invitations/my — pending invitations for the logged-in user
+const getMyInvitations = async (req, res) => {
+  try {
+    const { User } = require('../../models/user');
+    const currentUser = await User.findById(req.user._id).select('email');
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    const invitations = await invitationService.getMyInvitationsService(currentUser.email);
+    return res.status(200).json({ success: true, data: invitations });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createInvitation,
   handleInvitationResponse,
   getAllInvitations,
+  getMyInvitations,
   getInvitationById,
   getInvitationByToken,
   updateInvitation,
