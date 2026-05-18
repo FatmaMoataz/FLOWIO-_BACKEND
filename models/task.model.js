@@ -1,18 +1,8 @@
 import mongoose from 'mongoose';
 import Joi from 'joi';
 
-const taskStatusEnum = {
-    todo: 'todo',
-    inProgress: 'in-progress',
-    review: 'review',
-    done: 'done'
-};
-
-const taskPriorityEnum = {
-    low: 'low',
-    medium: 'medium',
-    high: 'high'
-};
+const taskStatusEnum = { todo: 'todo', inProgress: 'in-progress', review: 'review', done: 'done' };
+const taskPriorityEnum = { low: 'low', medium: 'medium', high: 'high' };
 
 const taskSchema = new mongoose.Schema(
     {
@@ -31,7 +21,12 @@ const taskSchema = new mongoose.Schema(
         projectId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Project',
-            required: true
+            default: null
+        },
+        epicId: {  // ← ADD THIS FIELD
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Epic',
+            default: null
         },
         assignedTo: {
             type: mongoose.Schema.Types.ObjectId,
@@ -48,17 +43,9 @@ const taskSchema = new mongoose.Schema(
             enum: Object.values(taskPriorityEnum),
             default: taskPriorityEnum.medium
         },
-        deadline: {
-            type: Date
-        },
-        isArchived: {
-            type: Boolean,
-            default: false
-        },
-        archivedAt: {
-            type: Date,
-            default: null
-        }
+        deadline: { type: Date },
+        isArchived: { type: Boolean, default: false },
+        archivedAt: { type: Date, default: null }
     },
     {
         timestamps: true,
@@ -69,25 +56,17 @@ const taskSchema = new mongoose.Schema(
 
 const Task = mongoose.model('Task', taskSchema);
 
-// ── Joi Validation ─────────────────────────────────────────────────────────────
-
+// Update Joi validation to include epicId
 function validateTask(data) {
     const schema = Joi.object({
         title: Joi.string().min(2).max(100).required(),
         description: Joi.string().max(500).optional().allow(''),
-        // projectId is intentionally excluded — injected from req.params in controller
+        epicId: Joi.string().hex().length(24).optional().allow(null),  // ← ADD THIS
         assignedTo: Joi.string().hex().length(24).optional().allow(null),
-        status: Joi.string()
-            .valid(...Object.values(taskStatusEnum))
-            .optional(),
-        priority: Joi.string()
-            .valid(...Object.values(taskPriorityEnum))
-            .optional(),
-        deadline: Joi.date().iso().optional().messages({
-            'date.format': 'deadline must be a valid ISO 8601 date'
-        })
+        status: Joi.string().valid(...Object.values(taskStatusEnum)).optional(),
+        priority: Joi.string().valid(...Object.values(taskPriorityEnum)).optional(),
+        deadline: Joi.date().iso().optional()
     });
-
     return schema.validate(data, { abortEarly: false });
 }
 
@@ -95,16 +74,12 @@ function validateTaskUpdate(data) {
     const schema = Joi.object({
         title: Joi.string().min(2).max(100).optional(),
         description: Joi.string().max(500).optional().allow(''),
+        epicId: Joi.string().hex().length(24).optional().allow(null),  // ← ADD THIS
         assignedTo: Joi.string().hex().length(24).optional().allow(null),
-        status: Joi.string()
-            .valid(...Object.values(taskStatusEnum))
-            .optional(),
-        priority: Joi.string()
-            .valid(...Object.values(taskPriorityEnum))
-            .optional(),
+        status: Joi.string().valid(...Object.values(taskStatusEnum)).optional(),
+        priority: Joi.string().valid(...Object.values(taskPriorityEnum)).optional(),
         deadline: Joi.date().iso().optional()
     });
-
     return schema.validate(data, { abortEarly: false });
 }
 

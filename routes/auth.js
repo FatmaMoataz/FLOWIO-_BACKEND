@@ -1,21 +1,27 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import Joi from 'joi';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 
+// Imports للموديلات - تم إضافة موديل الشركة بنجاح 🌟
 import { User, validateForgotPassword, validatePasswordReset } from '../models/user.js';
+import { Company } from '../models/company.js'; 
 import { RefreshToken } from '../models/refreshToken.model.js';
+
 import {
   generateAccessToken,
   generateRefreshToken,
   hashToken,
-  verifyAccessToken,
   getRefreshTokenExpiry
 } from '../utils/tokenUtils.js';
 import auth from '../middleware/auth.js';
 
-// ── Email transporter ─────────────────────────────────────────────────────────
+const router = express.Router();
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -24,66 +30,82 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-const router = express.Router();
+const subscriptionPlanEnum = {
+  free: 'free',
+  basic: 'basic',
+  premium: 'premium'
+};
 
-// ── Joi validation ────────────────────────────────────────────────────────────
+// الـ Validation المعتمد والمتوافق مع الفرونت إند
 function validateSignup(data) {
   const schema = Joi.object({
-    fullName: Joi.string().min(3).max(50).required(),
-    email:    Joi.string().email().required(),
+    name: Joi.string().min(3).max(50).required(),
+    email: Joi.string().email().required(),
     password: Joi.string().min(6).required(),
-    company:  Joi.string().optional(),
-    role:     Joi.string().optional()
+    company: Joi.string().min(2).max(50).required(), 
+    role: Joi.string().valid('system-admin', 'project-manager', 'founder', 'team-member').optional(),
+    specialization: Joi.string().valid('developer', 'designer', 'qa', 'none', 'Employee').optional()
   });
   return schema.validate(data);
 }
 
 function validateLogin(data) {
   const schema = Joi.object({
-    email:    Joi.string().email().required(),
+    email: Joi.string().email().required(),
     password: Joi.string().required()
   });
   return schema.validate(data);
 }
 
 // ========================================
-// 0️⃣  POST /api/auth/signup
+// 1️⃣  POST /api/auth/signup (تم دمج وإنشاء الشركة تلقائياً)
 // ========================================
 router.post('/signup', async (req, res) => {
   const { error } = validateSignup(req.body);
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
   try {
-    const { fullName, email, password, company, role } = req.body;
+    const { name, email, password, company, role, specialization } = req.body;
 
-    // Check if user already exists
-    let user = await User.findOne({ email });
+    // 1. التأكد من عدم تكرار الإيميل
+    let user = await User.findOne({ email: email.toLowerCase() });
     if (user) return res.status(400).json({ success: false, message: 'User already exists with this email.' });
 
-    // Hash password
+    // 2. عمل Hash للباسورد
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user
+    // 3. إنشاء الـ User
     user = new User({
-      name: fullName,
-      email,
+      name,
+      email: email.toLowerCase(),
       password: hashedPassword,
-      company: company || null,
-      role: role || 'team-member'
-      // specialization will use default value 'none' from schema
+      role: role || 'team-member',
+      specialization: specialization || 'none'
     });
 
     await user.save();
 
-    // Generate tokens
-    const accessToken        = generateAccessToken(user);
-    const rawRefreshToken    = generateRefreshToken();
+    // 4. إنشاء الـ Company تلقائياً بناءً على الـ Dropdown المبعوث
+    const newCompany = await Company.create({
+      name: `${name}'s Workplace`,
+      industry: company, 
+      subscriptionPlan: subscriptionPlanEnum.free,
+      userId: user._id 
+    });
+
+    // 5. ربط الشركة بالـ User وحفظ التعديل
+    user.companyId = newCompany._id;
+    await user.save();
+
+    // 6. توليد الـ Tokens
+    const accessToken = generateAccessToken(user);
+    const rawRefreshToken = generateRefreshToken();
     const hashedRefreshToken = hashToken(rawRefreshToken);
 
     await RefreshToken.create({
-      userId:    user._id,
-      token:     hashedRefreshToken,
+      userId: user._id,
+      token: hashedRefreshToken,
       expiresAt: getRefreshTokenExpiry(),
       userAgent: req.headers['user-agent'] || '',
       ipAddress: req.ip || ''
@@ -91,17 +113,17 @@ router.post('/signup', async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully!',
-      token: accessToken,  // Frontend expects response.data.token
+      message: 'Account and Company created successfully!',
+      token: accessToken,  
       data: {
         accessToken,
         refreshToken: rawRefreshToken,
         user: {
-          _id:            user._id,
-          name:           user.name,
-          email:          user.email,
-          role:           user.role,
-          company:        user.company,
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          companyId: user.companyId, 
           specialization: user.specialization
         }
       }
@@ -113,29 +135,28 @@ router.post('/signup', async (req, res) => {
 });
 
 // ========================================
-// 1️⃣  POST /api/auth/login
+// 2️⃣  POST /api/auth/login
 // ========================================
 router.post('/login', async (req, res) => {
   const { error } = validateLogin(req.body);
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
   try {
-    const user = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({ email: req.body.email.toLowerCase() });
     if (!user) return res.status(401).json({ success: false, message: 'Invalid email or password.' });
 
-    // Google-only accounts have no password
     if (!user.password) return res.status(400).json({ success: false, message: 'This account uses Google sign-in.' });
 
     const validPassword = await bcrypt.compare(req.body.password, user.password);
     if (!validPassword) return res.status(401).json({ success: false, message: 'Invalid email or password.' });
 
-    const accessToken        = generateAccessToken(user);
-    const rawRefreshToken    = generateRefreshToken();
+    const accessToken = generateAccessToken(user);
+    const rawRefreshToken = generateRefreshToken();
     const hashedRefreshToken = hashToken(rawRefreshToken);
 
     await RefreshToken.create({
-      userId:    user._id,
-      token:     hashedRefreshToken,
+      userId: user._id,
+      token: hashedRefreshToken,
       expiresAt: getRefreshTokenExpiry(),
       userAgent: req.headers['user-agent'] || '',
       ipAddress: req.ip || ''
@@ -143,17 +164,17 @@ router.post('/login', async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      token: accessToken,  // Frontend expects response.data.token
+      token: accessToken,  
       data: {
         accessToken,
         refreshToken: rawRefreshToken,
         user: {
-          _id:            user._id,
-          name:           user.name,
-          email:          user.email,
-          role:           user.role,
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
           specialization: user.specialization,
-          companyId:      user.companyId
+          companyId: user.companyId
         }
       }
     });
@@ -164,7 +185,7 @@ router.post('/login', async (req, res) => {
 });
 
 // ========================================
-// 2️⃣  POST /api/auth/refresh
+// 3️⃣  POST /api/auth/refresh
 // ========================================
 router.post('/refresh', async (req, res) => {
   const { refreshToken } = req.body;
@@ -184,16 +205,15 @@ router.post('/refresh', async (req, res) => {
     const user = await User.findById(storedToken.userId);
     if (!user) return res.status(401).json({ success: false, message: 'User no longer exists.' });
 
-    // Token rotation — delete old, issue new
     await RefreshToken.findByIdAndDelete(storedToken._id);
 
-    const newAccessToken        = generateAccessToken(user);
-    const newRawRefreshToken    = generateRefreshToken();
+    const newAccessToken = generateAccessToken(user);
+    const newRawRefreshToken = generateRefreshToken();
     const newHashedRefreshToken = hashToken(newRawRefreshToken);
 
     await RefreshToken.create({
-      userId:    user._id,
-      token:     newHashedRefreshToken,
+      userId: user._id,
+      token: newHashedRefreshToken,
       expiresAt: getRefreshTokenExpiry(),
       userAgent: req.headers['user-agent'] || '',
       ipAddress: req.ip || ''
@@ -202,7 +222,7 @@ router.post('/refresh', async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        accessToken:  newAccessToken,
+        accessToken: newAccessToken,
         refreshToken: newRawRefreshToken
       }
     });
@@ -213,7 +233,7 @@ router.post('/refresh', async (req, res) => {
 });
 
 // ========================================
-// 3️⃣  POST /api/auth/logout
+// 4️⃣  POST /api/auth/logout
 // ========================================
 router.post('/logout', async (req, res) => {
   const { refreshToken } = req.body;
@@ -230,7 +250,7 @@ router.post('/logout', async (req, res) => {
 });
 
 // ========================================
-// 4️⃣  POST /api/auth/logout-all  (requires auth)
+// 5️⃣  POST /api/auth/logout-all
 // ========================================
 router.post('/logout-all', auth, async (req, res) => {
   try {
@@ -246,16 +266,15 @@ router.post('/logout-all', auth, async (req, res) => {
 });
 
 // ========================================
-// 5️⃣  POST /api/auth/forgot-password
+// 6️⃣  POST /api/auth/forgot-password
 // ========================================
 router.post('/forgot-password', async (req, res) => {
   try {
     const { error } = validateForgotPassword(req.body);
     if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
-    const user = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({ email: req.body.email.toLowerCase() });
 
-    // Always return 200 to avoid email enumeration
     if (!user) return res.status(200).json({ success: true, message: 'If email exists, a reset link has been sent.' });
 
     const resetToken = user.generatePasswordResetToken();
@@ -264,8 +283,8 @@ router.post('/forgot-password', async (req, res) => {
     const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
     await transporter.sendMail({
-      from:    process.env.EMAIL_USER,
-      to:      user.email,
+      from: process.env.EMAIL_USER,
+      to: user.email,
       subject: 'Password Reset Request — Flowio',
       html: `
         <h2>Password Reset</h2>
@@ -284,7 +303,7 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // ========================================
-// 6️⃣  POST /api/auth/reset-password
+// 7️⃣  POST /api/auth/reset-password
 // ========================================
 router.post('/reset-password', async (req, res) => {
   try {
@@ -296,26 +315,25 @@ router.post('/reset-password', async (req, res) => {
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
     const user = await User.findOne({
-      passwordResetToken:   hashedToken,
+      passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() }
     });
 
     if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired reset token.' });
 
     const salt = await bcrypt.genSalt(10);
-    user.password             = await bcrypt.hash(newPassword, salt);
-    user.passwordResetToken   = null;
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.passwordResetToken = null;
     user.passwordResetExpires = null;
     await user.save();
 
-    // Auto-login: issue fresh token pair after reset
-    const accessToken        = generateAccessToken(user);
-    const rawRefreshToken    = generateRefreshToken();
+    const accessToken = generateAccessToken(user);
+    const rawRefreshToken = generateRefreshToken();
     const hashedRefreshToken = hashToken(rawRefreshToken);
 
     await RefreshToken.create({
-      userId:    user._id,
-      token:     hashedRefreshToken,
+      userId: user._id,
+      token: hashedRefreshToken,
       expiresAt: getRefreshTokenExpiry(),
       userAgent: req.headers['user-agent'] || '',
       ipAddress: req.ip || ''
@@ -324,14 +342,15 @@ router.post('/reset-password', async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Password reset successfully.',
+      token: accessToken,
       data: {
         accessToken,
         refreshToken: rawRefreshToken,
         user: {
-          _id:   user._id,
-          name:  user.name,
+          _id: user._id,
+          name: user.name,
           email: user.email,
-          role:  user.role
+          role: user.role
         }
       }
     });
@@ -342,38 +361,45 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // ========================================
-// 7️⃣  POST /api/auth/google
+// 8️⃣  POST /api/auth/google (محدث لإنشاء شركة تلقائياً للمستخدمين الجدد)
 // ========================================
 router.post('/google', async (req, res) => {
   try {
     const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required for Google authentication.' });
 
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required for Google authentication.' });
-    }
+    let user = await User.findOne({ email: email.toLowerCase() });
 
-    // Check if user exists
-    let user = await User.findOne({ email });
-
-    // If user doesn't exist, create new Google-only account (no password)
     if (!user) {
+      const defaultName = email.split('@')[0];
       user = new User({
-        name: email.split('@')[0],  // Use email prefix as name
-        email,
-        password: null,  // Google-only accounts have no password
-        specialization: 'Employee'
+        name: defaultName,  
+        email: email.toLowerCase(),
+        password: undefined, 
+        specialization: 'Employee',
+        role: 'team-member'
       });
+      await user.save();
+
+      // إنشاء شركة افتراضية للمسجل عن طريق جوجل كي لا يواجه مشاكل بالـ Dashboard
+      const googleCompany = await Company.create({
+        name: `${defaultName}'s Workplace`,
+        industry: 'Startup',
+        subscriptionPlan: subscriptionPlanEnum.free,
+        userId: user._id
+      });
+
+      user.companyId = googleCompany._id;
       await user.save();
     }
 
-    // Generate tokens
-    const accessToken        = generateAccessToken(user);
-    const rawRefreshToken    = generateRefreshToken();
+    const accessToken = generateAccessToken(user);
+    const rawRefreshToken = generateRefreshToken();
     const hashedRefreshToken = hashToken(rawRefreshToken);
 
     await RefreshToken.create({
-      userId:    user._id,
-      token:     hashedRefreshToken,
+      userId: user._id,
+      token: hashedRefreshToken,
       expiresAt: getRefreshTokenExpiry(),
       userAgent: req.headers['user-agent'] || '',
       ipAddress: req.ip || ''
@@ -382,15 +408,16 @@ router.post('/google', async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Google authentication successful!',
-      token: accessToken,  // Frontend expects response.data.token
+      token: accessToken,  
       data: {
         accessToken,
         refreshToken: rawRefreshToken,
         user: {
-          _id:            user._id,
-          name:           user.name,
-          email:          user.email,
-          role:           user.role,
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          companyId: user.companyId,
           specialization: user.specialization
         }
       }

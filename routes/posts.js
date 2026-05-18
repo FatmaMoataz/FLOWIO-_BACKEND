@@ -2,17 +2,20 @@ import express from 'express';
 import * as postController from './posts/post.controller.js';
 import { validate } from '../middleware/validation.middleware.js';
 import { createPostSchema, updatePostSchema, idParamSchema, commentSchema } from '../validations/postValidation.js';
+import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.post(
   "/",
+  auth,
   validate(createPostSchema),
   postController.createPost
 );
 
 router.get(
   "/",
+  auth,
   postController.getAllPosts
 );
 
@@ -24,6 +27,7 @@ router.get(
 
 router.put(
   "/:id",
+  auth,
   validate(idParamSchema, "params"),
   validate(updatePostSchema),
   postController.updatePost
@@ -31,24 +35,28 @@ router.put(
 
 router.delete(
   "/:id",
+  auth,
   validate(idParamSchema, "params"),
   postController.deletePost
 );
 
 router.post(
   "/:id/like",
+  auth,
   validate(idParamSchema, "params"),
   postController.likePost
 );
 
 router.delete(
   "/:id/like",
+  auth,
   validate(idParamSchema, "params"),
   postController.unlikePost
 );
 
 router.post(
   "/:id/comment",
+  auth,
   validate(idParamSchema, "params"),
   validate(commentSchema),
   postController.addComment

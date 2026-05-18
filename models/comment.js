@@ -9,7 +9,7 @@ const commentSchema = new mongoose.Schema(
       maxLength: [200, "Comment content cannot exceed 200 characters"]
     },
 
-    userId: {
+    userId: { 
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true
