@@ -24,7 +24,7 @@ try {
     process.exit(1);
 }
 
-// DB connection — using MONGODB_URI (Atlas)
+// DB connection
 const dbURI = process.env.MONGODB_URI;
 if (!dbURI) {
     console.error('FATAL ERROR: MONGODB_URI is not defined. Add it to your .env file.');
