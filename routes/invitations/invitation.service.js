@@ -33,6 +33,14 @@ const deleteInvitationService = async (id) => {
   return await Invitation.findByIdAndDelete(id);
 };
 
+const getMyInvitationsService = async (email) => {
+  return await Invitation.find({
+    emailInvited: email,
+    status: invitationStatusEnum.pending,
+    expiresAt: { $gt: new Date() }
+  }).populate('companyId', 'name industry');
+};
+
 module.exports = {
   generateInvitationToken,
   getPendingInvitationByEmailService,
@@ -42,4 +50,5 @@ module.exports = {
   getInvitationByTokenService,
   updateInvitationService,
   deleteInvitationService,
+  getMyInvitationsService,
 };
