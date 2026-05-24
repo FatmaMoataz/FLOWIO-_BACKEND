@@ -80,9 +80,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use(helmet());
 
-// Routes
+// ── Base Routes ────────────────────────────────────────────────────────────────
+// الدالة الترحيبية لمنع الـ 404 عند الدخول على الرابط الرئيسي مباشرة
+app.get('/', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'Welcome to FLOWIO Backend API!',
+        status: 'Server is running smoothly 🚀'
+    });
+});
+
 app.get('/test-me', (req, res) => res.send('Everything is OK!'));
 
+// ── API Routes ─────────────────────────────────────────────────────────────────
 app.use('/api/users',       users);
 app.use('/api/auth',        auth);
 app.use('/api/companies',   companiesRoutes);
