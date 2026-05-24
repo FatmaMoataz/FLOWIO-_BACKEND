@@ -50,6 +50,14 @@ const taskSchema = new mongoose.Schema(
         },
         deadline: {
             type: Date
+        },
+        isArchived: {
+            type: Boolean,
+            default: false
+        },
+        archivedAt: {
+            type: Date,
+            default: null
         }
     },
     {

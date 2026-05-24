@@ -87,6 +87,7 @@ app.use('/api/files',       require('./routes/files/fileAttachment.routes'));
 app.use('/api/activity',    require('./routes/activityLogs/activityLog.routes'));
 app.use('/api/meetings',    require('./routes/meetings/meeting.routes'));
 app.use('/api/boards',      require('./routes/boards/board.routes'));
+app.use('/api/archive', require('./routes/archive/archive.routes'));
 
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
