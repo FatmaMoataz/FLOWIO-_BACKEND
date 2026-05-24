@@ -96,3 +96,6 @@ if (app.get('env') === 'development') {
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => console.log(`Flowio Server listening on port ${port}...`));
+
+// At the end of index.js, add:
+module.exports = app;
