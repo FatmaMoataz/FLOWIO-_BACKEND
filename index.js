@@ -1,5 +1,4 @@
 require('dotenv').config();
-const config = require('config');
 const express = require('express');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
@@ -16,12 +15,10 @@ const reportRoutes = require('./routes/report/report.routes');
 const app = express();
 app.use(cors());
 
-// JWT key check
-try {
-    const jwtKey = config.get('jwtPrivateKey');
-    if (!jwtKey) throw new Error('jwtPrivateKey is empty');
-} catch (err) {
-    console.error('FATAL ERROR: jwtPrivateKey is not defined.');
+// JWT key check - use environment variable
+const jwtKey = process.env.JWT_PRIVATE_KEY;
+if (!jwtKey) {
+    console.error('FATAL ERROR: JWT_PRIVATE_KEY is not defined.');
     process.exit(1);
 }
 
