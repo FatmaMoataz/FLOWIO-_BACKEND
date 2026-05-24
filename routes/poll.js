@@ -1,5 +1,5 @@
-const express = require("express");
-const pollController = require("./polls/poll.controller");
+import express from 'express';
+import pollController from './polls/poll.controller.js';
 
 const router = express.Router();
 
@@ -21,4 +21,4 @@ router.post(
 // results
 router.get("/results/:id", pollController.getResults);
 
-module.exports = router;
+export default router;

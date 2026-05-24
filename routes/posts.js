@@ -1,15 +1,7 @@
-const express = require('express');
-
-const postController = require('./posts/post.controller');
-
-const { validate } = require('../middleware/validation.middleware');
-
-const {
-  createPostSchema,
-  updatePostSchema,
-  idParamSchema,
-  commentSchema
-} = require('../validations/postValidation');
+import express from 'express';
+import postController from './posts/post.controller.js';
+import { validate } from '../middleware/validation.middleware.js';
+import { createPostSchema, updatePostSchema, idParamSchema, commentSchema } from '../validations/postValidation.js';
 
 const router = express.Router();
 
@@ -48,6 +40,8 @@ router.post(
   validate(idParamSchema, "params"),
   postController.likePost
 );
+
+export default router;
 
 router.delete(
   "/:id/like",

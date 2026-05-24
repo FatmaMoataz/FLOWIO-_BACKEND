@@ -1,6 +1,6 @@
-const multer = require('multer');
-const path = require('path');
-const { allowedMimeTypes } = require('../models/fileAttachment.model');
+import multer from 'multer';
+import path from 'path';
+import { allowedMimeTypes } from '../models/fileAttachment.model.js';
 
 // ── Storage config ─────────────────────────────────────────────────────────────
 // Files saved to /uploads folder in project root.
@@ -36,4 +36,4 @@ const upload = multer({
     }
 });
 
-module.exports = upload;
+export default upload;

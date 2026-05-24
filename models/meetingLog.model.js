@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 /**
  * MeetingLog — stores everything the AI generates after a meeting ends.
@@ -78,4 +78,4 @@ const meetingLogSchema = new mongoose.Schema(
 
 const MeetingLog = mongoose.model('MeetingLog', meetingLogSchema);
 
-module.exports = { MeetingLog };
+export { MeetingLog };

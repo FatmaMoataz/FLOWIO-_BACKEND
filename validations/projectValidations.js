@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 // ── Epic Validation ────────────────────────────────────────────────────────────
 
@@ -86,4 +86,4 @@ const validateCreateTask = (data) => {
   return schema.validate(data, { abortEarly: false });
 };
 
-module.exports = { validateCreateEpic, validateCreateTask };
+export { validateCreateEpic, validateCreateTask };

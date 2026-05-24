@@ -1,4 +1,4 @@
-const postService = require('./post.service');
+import postService from './post.service.js';
 
 const createPost = async (req, res, next) => {
   try {
@@ -114,7 +114,7 @@ const addComment = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   createPost,
   getAllPosts,
   getPostById,

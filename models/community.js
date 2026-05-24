@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const communitySchema = new mongoose.Schema({
   name: { 
@@ -56,3 +56,5 @@ async function createCommunity() {
 }
 
 // createCommunity(); // Uncomment to test the creation
+
+export default Community;

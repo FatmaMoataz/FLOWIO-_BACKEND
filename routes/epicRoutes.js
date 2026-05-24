@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import Epic from '../models/epic.js';
+import { Task } from '../models/task.model.js';
+import { validateCreateEpic } from '../validations/projectValidations.js';
+import auth from '../middleware/auth.js';
+
 const router = express.Router();
-const Epic = require('../models/epic');
-const {Task}= require('../models/task.model');
-const { validateCreateEpic } = require('../validations/projectValidations');
-const auth = require('../middleware/auth');
 
 // ── POST /api/epics — Create Epic ──────────────────────────────────────────────
 
@@ -67,4 +68,4 @@ router.get('/:id/tasks', auth, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

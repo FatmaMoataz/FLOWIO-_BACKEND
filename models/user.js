@@ -1,6 +1,7 @@
-const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import Joi from 'joi';
+import crypto from 'crypto';
 
 const userSchema = new mongoose.Schema(
   {
@@ -65,7 +66,6 @@ userSchema.methods.generateAuthToken = function () {
 
 // ✅ Generate password reset token
 userSchema.methods.generatePasswordResetToken = function () {
-  const crypto = require('crypto');
   const resetToken = crypto.randomBytes(32).toString('hex');
   
   // Hash the token before storing
@@ -110,7 +110,7 @@ function validatePasswordReset(req) {
   return schema.validate(req);
 }
 
-module.exports.User = User;
-module.exports.validate = validateUser;
-module.exports.validateForgotPassword = validateForgotPassword;
-module.exports.validatePasswordReset = validatePasswordReset;
+export { User };
+export { validateUser as validate };
+export { validateForgotPassword };
+export { validatePasswordReset };

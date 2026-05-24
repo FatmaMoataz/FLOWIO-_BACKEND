@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const epicSchema = new mongoose.Schema(
   {
@@ -29,4 +29,4 @@ const epicSchema = new mongoose.Schema(
 
 const Epic = mongoose.model('Epic', epicSchema);
 
-module.exports = Epic;
+export default Epic;

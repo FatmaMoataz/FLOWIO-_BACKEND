@@ -1,10 +1,11 @@
-const auth = require('../middleware/auth');
-const { User, validate } = require('../models/user');
-const jwt = require('jsonwebtoken');
-const _ = require('lodash');
-const bcrypt = require('bcrypt');
-const Joi = require('joi');
-const express = require('express');
+import auth from '../middleware/auth.js';
+import { User, validate } from '../models/user.js';
+import jwt from 'jsonwebtoken';
+import _ from 'lodash';
+import bcrypt from 'bcrypt';
+import Joi from 'joi';
+import express from 'express';
+
 const router = express.Router();
 
 // ── GET /api/users/me ──────────────────────────────────────────────────────────
@@ -147,4 +148,4 @@ function validatePasswordChange(data) {
     return schema.validate(data);
 }
 
-module.exports = router;
+export default router;

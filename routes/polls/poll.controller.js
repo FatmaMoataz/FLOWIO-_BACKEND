@@ -1,11 +1,6 @@
-const pollService = require("./poll.service");
-const Joi = require("joi");
-
-const {
-  createPollSchema,
-  votePollSchema,
-  idParamSchema
-} = require("../../validations/pollValidation");
+import pollService from './poll.service.js';
+import Joi from 'joi';
+import { createPollSchema, votePollSchema, idParamSchema } from '../../validations/pollValidation.js';
 
 // CREATE
 const createPoll = async (req, res, next) => {
@@ -56,7 +51,7 @@ const getResults = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   createPoll,
   getAllPolls,
   votePoll,

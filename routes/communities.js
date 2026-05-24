@@ -1,5 +1,6 @@
-const auth = require('../middleware/auth'); 
-const express = require('express');
+import auth from '../middleware/auth.js';
+import express from 'express';
+
 const router = express.Router();
 
 // Route محمي - لا يمكن دخوله بدون Token 🛡️
@@ -16,4 +17,4 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

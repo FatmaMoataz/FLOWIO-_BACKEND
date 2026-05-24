@@ -1,5 +1,5 @@
-const jwt   = require('jsonwebtoken');
-const crypto = require('crypto'); // built-in Node.js — no install needed
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 // ── Token lifetimes ────────────────────────────────────────────────────────────
 const ACCESS_TOKEN_EXPIRY  = '15m';   // short-lived  — expires in 15 minutes
@@ -48,7 +48,7 @@ const getRefreshTokenExpiry = () => {
     return new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS);
 };
 
-module.exports = {
+export {
     generateAccessToken,
     generateRefreshToken,
     hashToken,

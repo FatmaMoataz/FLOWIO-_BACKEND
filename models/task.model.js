@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import mongoose from 'mongoose';
+import Joi from 'joi';
 
 const taskStatusEnum = {
     todo: 'todo',
@@ -108,4 +108,4 @@ function validateTaskUpdate(data) {
     return schema.validate(data, { abortEarly: false });
 }
 
-module.exports = { Task, taskStatusEnum, taskPriorityEnum, validateTask, validateTaskUpdate };
+export { Task, taskStatusEnum, taskPriorityEnum, validateTask, validateTaskUpdate };

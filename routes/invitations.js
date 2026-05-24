@@ -1,6 +1,6 @@
-const express = require('express');
-const auth = require('../middleware/auth');
-const invitationController = require('./invitations/invitation.controller');
+import express from 'express';
+import auth from '../middleware/auth.js';
+import invitationController from './invitations/invitation.controller.js';
 
 const router = express.Router();
 
@@ -14,4 +14,4 @@ router.get('/:id', auth, invitationController.getInvitationById);
 router.put('/:id', auth, invitationController.updateInvitation);
 router.delete('/:id', auth, invitationController.deleteInvitation);
 
-module.exports = router;
+export default router;

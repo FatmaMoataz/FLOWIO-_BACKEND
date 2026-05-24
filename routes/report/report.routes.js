@@ -1,6 +1,6 @@
-const express = require('express');
-const auth = require('../../middleware/auth');
-const reportController = require('./report.controller');
+import express from 'express';
+import auth from '../../middleware/auth.js';
+import reportController from './report.controller.js';
 
 const router = express.Router();
 router.use(auth);
@@ -11,4 +11,4 @@ router.get('/:id', reportController.getReportById);
 router.put('/:id', reportController.updateReport);
 router.delete('/:id', reportController.deleteReport);
 
-module.exports = router;
+export default router;

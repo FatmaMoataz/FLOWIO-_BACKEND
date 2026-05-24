@@ -1,4 +1,4 @@
-const Joi = require("joi");
+import Joi from 'joi';
 
 const objectId = Joi.string().hex().length(24);
 
@@ -40,7 +40,7 @@ const userIdParamSchema = Joi.object({
   userId: objectId.required(),
 });
 
-module.exports = {
+export {
   createNotificationSchema,
   markAsReadSchema,
   idParamSchema,

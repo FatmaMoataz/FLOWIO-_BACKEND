@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const invitationStatusEnum = {
   pending: 'pending',
@@ -42,7 +42,4 @@ companyId:{
 
 const Invitation = mongoose.model('Invitation', invitationSchema);
 
-module.exports = {
-  Invitation,
-  invitationStatusEnum,
-};
+export { Invitation, invitationStatusEnum };

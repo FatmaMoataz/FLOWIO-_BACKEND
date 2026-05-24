@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import mongoose from 'mongoose';
+import Joi from 'joi';
 
 const columnStatusEnum = ['To Do', 'In Progress', 'In Review', 'Done'];
 
@@ -71,4 +71,4 @@ function validateReorder(data) {
   return schema.validate(data, { abortEarly: false });
 }
 
-module.exports = { KanbanColumn, columnStatusEnum, validateColumn, validateColumnUpdate, validateReorder };
+export { KanbanColumn, columnStatusEnum, validateColumn, validateColumnUpdate, validateReorder };

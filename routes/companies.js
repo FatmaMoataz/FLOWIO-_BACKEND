@@ -1,6 +1,6 @@
-const express = require('express');
-const auth = require('../middleware/auth');
-const companyController = require('./companies/company.controller.js');
+import express from 'express';
+import auth from '../middleware/auth.js';
+import companyController from './companies/company.controller.js';
 
 const router = express.Router();
 
@@ -14,4 +14,4 @@ router.get('/:id', companyController.getCompanyById);
 router.put('/:id', companyController.updateCompany);
 router.delete('/:id', companyController.deleteCompany);
 
-module.exports = router;
+export default router;

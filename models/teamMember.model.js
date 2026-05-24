@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import mongoose from 'mongoose';
+import Joi from 'joi';
 
 const teamRoleEnum = {
     lead: 'lead',
@@ -68,4 +68,4 @@ function validateTeamMemberUpdate(data) {
     return schema.validate(data, { abortEarly: false });
 }
 
-module.exports = { TeamMember, teamRoleEnum, validateTeamMember, validateTeamMemberUpdate };
+export { TeamMember, teamRoleEnum, validateTeamMember, validateTeamMemberUpdate };

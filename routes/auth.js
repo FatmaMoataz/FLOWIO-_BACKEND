@@ -1,20 +1,19 @@
-const express = require('express');
-const Joi     = require('joi');
-const bcrypt  = require('bcrypt');
-const crypto  = require('crypto');
-const router  = express.Router();
-const nodemailer = require('nodemailer');
+import express from 'express';
+import Joi from 'joi';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
-const { User, validateForgotPassword, validatePasswordReset } = require('../models/user');
-const { RefreshToken } = require('../models/refreshToken.model');
-const {
+import { User, validateForgotPassword, validatePasswordReset } from '../models/user.js';
+import { RefreshToken } from '../models/refreshToken.model.js';
+import {
   generateAccessToken,
   generateRefreshToken,
   hashToken,
   verifyAccessToken,
   getRefreshTokenExpiry
-} = require('../utils/tokenUtils');
-const auth = require('../middleware/auth');
+} from '../utils/tokenUtils.js';
+import auth from '../middleware/auth.js';
 
 // ── Email transporter ─────────────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
@@ -24,6 +23,8 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASSWORD
   }
 });
+
+const router = express.Router();
 
 // ── Joi validation ────────────────────────────────────────────────────────────
 function validateLogin(data) {
@@ -262,4 +263,4 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,4 +1,4 @@
-const { verifyAccessToken } = require('../utils/tokenUtils');
+import { verifyAccessToken } from '../utils/tokenUtils.js';
 
 /**
  * Auth Middleware — updated for Access Token / Refresh Token system
@@ -9,7 +9,7 @@ const { verifyAccessToken } = require('../utils/tokenUtils');
  * Falls back to x-auth-token header for backward compatibility
  * with your existing Thunder Client tests.
  */
-module.exports = function auth(req, res, next) {
+export default function auth(req, res, next) {
     // Support both Authorization: Bearer <token> and legacy x-auth-token header
     let token = null;
 

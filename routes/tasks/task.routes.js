@@ -1,6 +1,6 @@
-const express = require('express');
-const auth = require('../../middleware/auth');
-const taskController = require('./task.controller');
+import express from 'express';
+import auth from '../../middleware/auth.js';
+import taskController from './task.controller.js';
 
 const router = express.Router({ mergeParams: true });
 
@@ -23,4 +23,4 @@ router.get('/:id',    taskController.getTaskById);
 router.put('/:id',    taskController.updateTask);
 router.delete('/:id', taskController.deleteTask);
 
-module.exports = router;
+export default router;

@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import mongoose from 'mongoose';
+import Joi from 'joi';
 
 const meetingStatusEnum = {
     scheduled: 'scheduled',
@@ -98,5 +98,7 @@ function validateMeetingUpdate(data) {
 
     return schema.validate(data, { abortEarly: false });
 }
+
+export { Meeting, meetingStatusEnum, validateMeeting, validateMeetingUpdate };
 
 module.exports = { Meeting, meetingStatusEnum, validateMeeting, validateMeetingUpdate };

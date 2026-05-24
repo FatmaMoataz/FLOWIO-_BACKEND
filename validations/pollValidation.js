@@ -1,4 +1,4 @@
-const Joi = require("joi");
+import Joi from 'joi';
 
 const createPollSchema = Joi.object({
   question: Joi.string().min(1).required(),
@@ -40,7 +40,7 @@ const idParamSchema = Joi.object({
     .required()
 });
 
-module.exports = {
+export {
   createPollSchema,
   votePollSchema,
   idParamSchema

@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import mongoose from 'mongoose';
+import Joi from 'joi';
 
 const reportEnum = {
     bug: 'bug',
@@ -45,7 +45,4 @@ const reportSchema = new mongoose.Schema({
 
 const Report = mongoose.model('Report', reportSchema);
 
-module.exports = {
-    Report,
-    reportEnum
-};
+export { Report, reportEnum };

@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import mongoose from 'mongoose';
+import Joi from 'joi';
 
 const activityActionEnum = {
     created:    'created',
@@ -92,9 +92,4 @@ function validateActivityLog(data) {
     return schema.validate(data, { abortEarly: false });
 }
 
-module.exports = {
-    ActivityLog,
-    activityActionEnum,
-    activityEntityEnum,
-    validateActivityLog
-};
+export { ActivityLog, activityActionEnum, activityEntityEnum, validateActivityLog };

@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from 'mongoose';
 
 const pollVoteSchema = new mongoose.Schema(
   {
@@ -25,6 +25,6 @@ const pollVoteSchema = new mongoose.Schema(
 // prevent duplicate vote
 pollVoteSchema.index({ pollId: 1, userId: 1 }, { unique: true });
 
-const PollVote = mongoose.model("PollVote", pollVoteSchema);
+const PollVote = mongoose.model('PollVote', pollVoteSchema);
 
-module.exports = PollVote;
+export default PollVote;

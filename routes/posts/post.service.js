@@ -1,5 +1,5 @@
-const Post = require("../../models/post.js");
-const Comment = require("../../models/comment.js");
+import Post from '../../models/post.js';
+import Comment from '../../models/comment.js';
 
 const createPostService = async (data) => {
   const post = await Post.create(data);
@@ -198,7 +198,7 @@ const addCommentService = async (
   };
 };
 
-module.exports = {
+export default {
   createPostService,
   getAllPostsService,
   getPostByIdService,

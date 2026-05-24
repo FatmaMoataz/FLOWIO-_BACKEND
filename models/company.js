@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import mongoose from 'mongoose';
+import Joi from 'joi';
 
 const subscriptionPlanEnum = {
     free: 'free',
@@ -75,9 +75,4 @@ function validateCompanyUpdate(company) {
     return schema.validate(company);
 }
 
-module.exports = {
-    Company,
-    subscriptionPlanEnum,
-    validateCompany,
-    validateCompanyUpdate
-};
+export { Company, subscriptionPlanEnum, validateCompany, validateCompanyUpdate };

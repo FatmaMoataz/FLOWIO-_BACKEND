@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const OBJECT_ID = Joi.string().hex().length(24);
 const allowedReportTypes = ['bug', 'feature', 'task', 'other'];
@@ -23,7 +23,7 @@ const idParamSchema = Joi.object({
   id: OBJECT_ID.required()
 });
 
-module.exports = {
+export {
   createReportSchema,
   updateReportSchema,
   idParamSchema,

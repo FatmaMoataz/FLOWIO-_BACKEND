@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const taskService = require('./task.service');
+import taskService from './task.service.js';
 const { validateTask, validateTaskUpdate } = require('../../models/task.model');
 
 // ── Helper ─────────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import mongoose from 'mongoose';
+import Joi from 'joi';
 
 const boardSchema = new mongoose.Schema(
   {
@@ -59,4 +59,4 @@ function validateBoardUpdate(data) {
   return schema.validate(data, { abortEarly: false });
 }
 
-module.exports = { Board, validateBoard, validateBoardUpdate };
+export { Board, validateBoard, validateBoardUpdate };

@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import mongoose from 'mongoose';
+import Joi from 'joi';
 
 const projectRoleEnum = {
     projectManager: 'project-manager',
@@ -69,4 +69,4 @@ function validateProjectMemberUpdate(data) {
     return schema.validate(data, { abortEarly: false });
 }
 
-module.exports = { ProjectMember, projectRoleEnum, validateProjectMember, validateProjectMemberUpdate };
+export { ProjectMember, projectRoleEnum, validateProjectMember, validateProjectMemberUpdate };

@@ -33,4 +33,4 @@ router.get('/:teamId/members',                      teamMemberController.getMemb
 router.put('/:teamId/members/:memberId',            teamMemberController.updateTeamMemberRole);
 router.delete('/:teamId/members/:memberId',         teamMemberController.removeTeamMember);
 
-module.exports = router;
+export default router;

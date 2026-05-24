@@ -1,4 +1,4 @@
-const Joi = require("joi");
+import Joi from 'joi';
 
 const createPostSchema = Joi.object({
   content: Joi.string().min(1).max(300).required(),
@@ -34,7 +34,7 @@ const commentSchema = Joi.object({
   content: Joi.string().min(1).max(200).required()
 });
 
-module.exports = {
+export {
   createPostSchema,
   updatePostSchema,
   idParamSchema,

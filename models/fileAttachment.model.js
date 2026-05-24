@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Joi = require('joi');
+import mongoose from 'mongoose';
+import Joi from 'joi';
 
 const allowedMimeTypes = [
     'image/jpeg',
@@ -76,4 +76,4 @@ function validateFileAttachment(data) {
     return schema.validate(data, { abortEarly: false });
 }
 
-module.exports = { FileAttachment, allowedMimeTypes, validateFileAttachment };
+export { FileAttachment, allowedMimeTypes, validateFileAttachment };
