@@ -1,7 +1,0 @@
-{
-    "name": "FLOWIO",
-    "jwtPrivateKey": "your-super-secret-jwt-key-change-in-production-now",
-    "emailUser": "shahdessam112233@gmail.com",
-    "emailPassword": "voif cohq uddw tioq",
-    "clientUrl": "http://localhost:4000"
-}
