@@ -1,6 +1,6 @@
 // إضافة امتداد .js للموديلات المحلية إجباري
 import { Board, validateBoard, validateBoardUpdate } from '../../models/board.model.js';
-import { KanbanColumn, validateColumn, validateColumnUpdate, validateReorder } from '../../models/kanbanColumn.model.js';
+import { KanbanColumn, validateColumn, validateColumnUpdate, validateReorder } from '../../models/KanbanColumn.model.js';
 
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
