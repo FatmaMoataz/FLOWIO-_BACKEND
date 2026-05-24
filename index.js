@@ -94,8 +94,12 @@ if (app.get('env') === 'development') {
     console.log('Morgan enabled...');
 }
 
-const port = process.env.PORT || 4000;
-app.listen(port, () => console.log(`Flowio Server listening on port ${port}...`));
+// Export for Vercel
+module.exports = app;
 
-// At the end of index.js, add:
+// Only listen locally (not on Vercel)
+if (process.env.NODE_ENV !== 'production') {
+    const port = process.env.PORT || 4000;
+    app.listen(port, () => console.log(`Flowio Server listening on port ${port}...`));
+}
 module.exports = app;
