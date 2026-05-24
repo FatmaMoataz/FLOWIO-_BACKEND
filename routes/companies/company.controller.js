@@ -1,7 +1,8 @@
-const companyService = require('./company.service.js');
-const { validateCompany, validateCompanyUpdate } = require('../../models/company');
+// إضافة امتداد .js للملفات والموديلات المحلية إجباري
+import companyService from './company.service.js';
+import { validateCompany, validateCompanyUpdate } from '../../models/company.js';
 
-const createCompany = async (req, res) => {
+export const createCompany = async (req, res) => {
     const { error } = validateCompany(req.body);
     if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
@@ -9,12 +10,12 @@ const createCompany = async (req, res) => {
         const company = await companyService.createCompanyService(req.body);
         res.status(201).json({ success: true, data: company });
     } catch (err) {
-        console.error('[createCompany] Error:', err); // ← add this to see the real error
+        console.error('[createCompany] Error:', err);
         res.status(400).json({ success: false, message: err.message });
     }
 };
 
-const getAllCompanies = async (req, res) => {
+export const getAllCompanies = async (req, res) => {
     try {
         const companies = await companyService.getAllCompaniesService();
         res.status(200).json({ success: true, data: companies });
@@ -23,7 +24,7 @@ const getAllCompanies = async (req, res) => {
     }
 };
 
-const getCompanyById = async (req, res) => {
+export const getCompanyById = async (req, res) => {
     try {
         const company = await companyService.getCompanyByIdService(req.params.id);
         res.status(200).json({ success: true, data: company });
@@ -32,7 +33,7 @@ const getCompanyById = async (req, res) => {
     }
 };
 
-const updateCompany = async (req, res) => {
+export const updateCompany = async (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
         return res.status(400).json({ success: false, message: 'No data provided for update' });
     }
@@ -51,7 +52,7 @@ const updateCompany = async (req, res) => {
     }
 };
 
-const deleteCompany = async (req, res) => {
+export const deleteCompany = async (req, res) => {
     try {
         const company = await companyService.deleteCompanyService(req.params.id);
         if (!company) {
@@ -61,12 +62,4 @@ const deleteCompany = async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
-};
-
-module.exports = {
-    createCompany,
-    getAllCompanies,
-    getCompanyById,
-    updateCompany,
-    deleteCompany
 };

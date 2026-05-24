@@ -1,4 +1,5 @@
-const { Task } = require('../../models/task.model');
+// إضافة امتداد .js للموديل المحلي إجباري
+import { Task } from '../../models/task.model.js';
 
 // ── Shared populate config ─────────────────────────────────────────────────────
 const TASK_POPULATE = [
@@ -7,15 +8,13 @@ const TASK_POPULATE = [
 ];
 
 // ── Create ─────────────────────────────────────────────────────────────────────
-
-const createTaskService = async (data) => {
+export const createTaskService = async (data) => {
     const task = await Task.create(data);
     return await task.populate(TASK_POPULATE);
 };
 
 // ── Get All Tasks for a Project (with optional filters) ────────────────────────
-
-const getAllTasksByProjectService = async (projectId, filters = {}) => {
+export const getAllTasksByProjectService = async (projectId, filters = {}) => {
     const query = { projectId, ...filters };
     return await Task.find(query)
         .populate(TASK_POPULATE)
@@ -23,22 +22,19 @@ const getAllTasksByProjectService = async (projectId, filters = {}) => {
 };
 
 // ── Get Tasks by any filter (used for my-tasks) ────────────────────────────────
-
-const getTasksByFilterService = async (filters = {}) => {
+export const getTasksByFilterService = async (filters = {}) => {
     return await Task.find(filters)
         .populate(TASK_POPULATE)
         .sort({ createdAt: -1 });
 };
 
 // ── Get Single Task ────────────────────────────────────────────────────────────
-
-const getTaskByIdService = async (id) => {
+export const getTaskByIdService = async (id) => {
     return await Task.findById(id).populate(TASK_POPULATE);
 };
 
 // ── Update Task ────────────────────────────────────────────────────────────────
-
-const updateTaskService = async (id, data) => {
+export const updateTaskService = async (id, data) => {
     return await Task.findByIdAndUpdate(
         id,
         data,
@@ -47,12 +43,12 @@ const updateTaskService = async (id, data) => {
 };
 
 // ── Delete Task ────────────────────────────────────────────────────────────────
-
-const deleteTaskService = async (id) => {
+export const deleteTaskService = async (id) => {
     return await Task.findByIdAndDelete(id);
 };
 
-module.exports = {
+// كائن الـ default لسهولة الاستدعاء بالتنقيط في الـ Controller
+export default {
     createTaskService,
     getAllTasksByProjectService,
     getTasksByFilterService,

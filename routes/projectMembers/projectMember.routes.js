@@ -1,6 +1,7 @@
-const express = require('express');
-const auth = require('../../middleware/auth');
-const projectMemberController = require('./projectMember.controller');
+import express from 'express';
+// إضافة امتداد .js للملفات والـ Middlewares المحلية إجباري
+import auth from '../../middleware/auth.js';
+import * as projectMemberController from './projectMember.controller.js';
 
 // mergeParams: true → allows access to :projectId from the parent route
 const router = express.Router({ mergeParams: true });
@@ -9,8 +10,8 @@ router.use(auth);
 
 // ── Nested under /api/projects/:projectId/members ──────────────────────────────
 //
-// POST   /api/projects/:projectId/members              → add a member
-// GET    /api/projects/:projectId/members              → get all members of a project
+// POST   /api/projects/:projectId/members               → add a member
+// GET    /api/projects/:projectId/members               → get all members of a project
 // PUT    /api/projects/:projectId/members/:memberId    → update member role
 // DELETE /api/projects/:projectId/members/:memberId    → remove member
 
@@ -24,4 +25,4 @@ router.delete('/:memberId',         projectMemberController.removeMember);
 
 router.get('/user/:userId',         projectMemberController.getProjectsByUser);
 
-module.exports = router;
+export default router;

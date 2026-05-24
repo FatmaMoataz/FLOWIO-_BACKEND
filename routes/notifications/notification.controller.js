@@ -1,17 +1,17 @@
-const notificationService = require("./notification.service");
-const Joi = require("joi");
-
-const {
+import Joi from "joi";
+// إضافة امتداد .js للملفات والـ validations المحلية إجباري
+import notificationService from "./notification.service.js";
+import {
   createNotificationSchema,
   markAsReadSchema,
   userIdParamSchema,
   idParamSchema
-} = require("../../validations/notificationValidation");
+} from "../../validations/notificationValidation.js";
 
 const objectId = Joi.string().hex().length(24);
 
-// CREATE
-const createNotification = async (req, res, next) => {
+// ── CREATE ─────────────────────────────────────────────────────────────────────
+export const createNotification = async (req, res, next) => {
   const { error } = createNotificationSchema.validate(req.body);
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
@@ -23,8 +23,8 @@ const createNotification = async (req, res, next) => {
   }
 };
 
-// GET USER NOTIFICATIONS
-const getUserNotifications = async (req, res, next) => {
+// ── GET USER NOTIFICATIONS ─────────────────────────────────────────────────────
+export const getUserNotifications = async (req, res, next) => {
   const { error } = userIdParamSchema.validate({ userId: req.params.userId });
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
@@ -39,8 +39,8 @@ const getUserNotifications = async (req, res, next) => {
   }
 };
 
-// MARK AS READ
-const markAsRead = async (req, res, next) => {
+// ── MARK AS READ ───────────────────────────────────────────────────────────────
+export const markAsRead = async (req, res, next) => {
   const { error } = idParamSchema.validate({ id: req.params.id });
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
@@ -57,8 +57,8 @@ const markAsRead = async (req, res, next) => {
   }
 };
 
-// DELETE
-const deleteNotification = async (req, res, next) => {
+// ── DELETE ─────────────────────────────────────────────────────────────────────
+export const deleteNotification = async (req, res, next) => {
   const { error } = idParamSchema.validate({ id: req.params.id });
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
@@ -75,11 +75,4 @@ const deleteNotification = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-};
-
-module.exports = {
-  createNotification,
-  getUserNotifications,
-  markAsRead,
-  deleteNotification
 };

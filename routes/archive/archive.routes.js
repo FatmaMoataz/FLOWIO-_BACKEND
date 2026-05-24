@@ -1,7 +1,9 @@
-const express = require('express');
-const router  = express.Router();
-const auth    = require('../../middleware/auth');
-const archiveController = require('./archive.controller');
+import express from 'express';
+// إضافة امتداد .js للـ middleware والـ controller
+import auth from '../../middleware/auth.js';
+import * as archiveController from './archive.controller.js';
+
+const router = express.Router();
 
 // All archive routes require authentication
 router.use(auth);
@@ -16,4 +18,4 @@ router.post('/task/:id',     archiveController.archiveTask);
 router.get('/company/:id',   archiveController.getArchivedByCompany);
 router.delete('/:id',        archiveController.restoreItem);
 
-module.exports = router;
+export default router;

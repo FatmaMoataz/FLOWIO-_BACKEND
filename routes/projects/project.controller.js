@@ -1,11 +1,9 @@
-const projectService = require('./project.service');
-const { validateProject, validateProjectUpdate } = require('../../models/project.model');
+// إضافة امتداد .js للملفات والموديلات المحلية إجباري
+import projectService from './project.service.js';
+import { validateProject, validateProjectUpdate } from '../../models/project.model.js';
 
 // ── Create Project ─────────────────────────────────────────────────────────────
-// companyId comes from req.body — validated by Joi as a 24-char hex string.
-// No injection from req.user here because a user may manage multiple companies.
-
-const createProject = async (req, res) => {
+export const createProject = async (req, res) => {
     const { error } = validateProject(req.body);
     if (error) {
         const messages = error.details.map(d => d.message);
@@ -22,8 +20,7 @@ const createProject = async (req, res) => {
 };
 
 // ── Get All Projects by Company ────────────────────────────────────────────────
-
-const getAllProjectsByCompany = async (req, res) => {
+export const getAllProjectsByCompany = async (req, res) => {
     const { companyId } = req.params;
 
     if (!companyId || !/^[0-9a-fA-F]{24}$/.test(companyId)) {
@@ -40,8 +37,7 @@ const getAllProjectsByCompany = async (req, res) => {
 };
 
 // ── Get Project by ID ──────────────────────────────────────────────────────────
-
-const getProjectById = async (req, res) => {
+export const getProjectById = async (req, res) => {
     try {
         const project = await projectService.getProjectByIdService(req.params.id);
         if (!project) {
@@ -55,8 +51,7 @@ const getProjectById = async (req, res) => {
 };
 
 // ── Update Project ─────────────────────────────────────────────────────────────
-
-const updateProject = async (req, res) => {
+export const updateProject = async (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
         return res.status(400).json({ success: false, message: 'No data provided for update.' });
     }
@@ -80,8 +75,7 @@ const updateProject = async (req, res) => {
 };
 
 // ── Delete Project ─────────────────────────────────────────────────────────────
-
-const deleteProject = async (req, res) => {
+export const deleteProject = async (req, res) => {
     try {
         const project = await projectService.deleteProjectService(req.params.id);
         if (!project) {
@@ -92,12 +86,4 @@ const deleteProject = async (req, res) => {
         console.error('[deleteProject]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
-};
-
-module.exports = {
-    createProject,
-    getAllProjectsByCompany,
-    getProjectById,
-    updateProject,
-    deleteProject
 };

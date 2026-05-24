@@ -1,6 +1,6 @@
-const { v4: uuidv4 } = require('uuid');
-const { Meeting, meetingStatusEnum } = require('../../models/meeting.model');
-const { MeetingLog } = require('../../models/meetingLog.model');
+import { v4 as uuidv4 } from 'uuid';
+import { Meeting, meetingStatusEnum } from '../../models/meeting.model.js';
+import { MeetingLog } from '../../models/meetingLog.model.js';
 
 // ── Shared populate ────────────────────────────────────────────────────────────
 const MEETING_POPULATE = [
@@ -10,8 +10,7 @@ const MEETING_POPULATE = [
 ];
 
 // ── Create Meeting ─────────────────────────────────────────────────────────────
-
-const createMeetingService = async (data) => {
+export const createMeetingService = async (data) => {
     const roomId = uuidv4(); // unique room ID for WebRTC
     const meeting_link = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/meeting/${roomId}`;
 
@@ -24,22 +23,19 @@ const createMeetingService = async (data) => {
 };
 
 // ── Get All Meetings for a Project ─────────────────────────────────────────────
-
-const getMeetingsByProjectService = async (projectId) => {
+export const getMeetingsByProjectService = async (projectId) => {
     return await Meeting.find({ projectId })
         .populate(MEETING_POPULATE)
         .sort({ createdAt: -1 });
 };
 
 // ── Get Single Meeting ─────────────────────────────────────────────────────────
-
-const getMeetingByIdService = async (id) => {
+export const getMeetingByIdService = async (id) => {
     return await Meeting.findById(id).populate(MEETING_POPULATE);
 };
 
 // ── Start Meeting ──────────────────────────────────────────────────────────────
-
-const startMeetingService = async (id) => {
+export const startMeetingService = async (id) => {
     return await Meeting.findByIdAndUpdate(
         id,
         { status: meetingStatusEnum.live, startedAt: new Date() },
@@ -48,8 +44,7 @@ const startMeetingService = async (id) => {
 };
 
 // ── End Meeting ────────────────────────────────────────────────────────────────
-
-const endMeetingService = async (id) => {
+export const endMeetingService = async (id) => {
     const meeting = await Meeting.findById(id);
     if (!meeting) return null;
 
@@ -74,28 +69,26 @@ const endMeetingService = async (id) => {
 };
 
 // ── Update Meeting ─────────────────────────────────────────────────────────────
-
-const updateMeetingService = async (id, data) => {
+export const updateMeetingService = async (id, data) => {
     return await Meeting.findByIdAndUpdate(id, data, { new: true, runValidators: true })
         .populate(MEETING_POPULATE);
 };
 
 // ── Delete Meeting ─────────────────────────────────────────────────────────────
-
-const deleteMeetingService = async (id) => {
+export const deleteMeetingService = async (id) => {
     await MeetingLog.findOneAndDelete({ meetingId: id });
     return await Meeting.findByIdAndDelete(id);
 };
 
 // ── Get Meeting Log ────────────────────────────────────────────────────────────
-
-const getMeetingLogService = async (meetingId) => {
+export const getMeetingLogService = async (meetingId) => {
     return await MeetingLog.findOne({ meetingId })
         .populate('extracted_tasks.assignedTo', 'name email')
         .populate('extracted_tasks.taskId', 'title status');
 };
 
-module.exports = {
+// عمل export default هنا أيضاً ليسهل استدعاؤه ككائن موحد في الـ controller
+export default {
     createMeetingService,
     getMeetingsByProjectService,
     getMeetingByIdService,

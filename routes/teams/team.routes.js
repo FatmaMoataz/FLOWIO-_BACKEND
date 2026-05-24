@@ -1,7 +1,8 @@
-const express = require('express');
-const auth = require('../../middleware/auth');
-const teamController = require('./team.controller');
-const teamMemberController = require('./teamMember.controller');
+import express from 'express';
+// إضافة امتداد .js للملفات والـ Middlewares المحلية إجباري
+import auth from '../../middleware/auth.js';
+import * as teamController from './team.controller.js';
+import * as teamMemberController from './teamMember.controller.js';
 
 const router = express.Router();
 

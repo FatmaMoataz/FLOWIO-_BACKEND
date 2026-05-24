@@ -1,4 +1,5 @@
-const { Team } = require('../../models/team.model');
+// إضافة امتداد .js للموديل المحلي إجباري
+import { Team } from '../../models/team.model.js';
 
 // ── Shared populate config ─────────────────────────────────────────────────────
 const TEAM_POPULATE = [
@@ -7,27 +8,24 @@ const TEAM_POPULATE = [
 ];
 
 // ── Create ─────────────────────────────────────────────────────────────────────
-
-const createTeamService = async (data) => {
+export const createTeamService = async (data) => {
     const team = await Team.create(data);
     return await team.populate(TEAM_POPULATE);
 };
 
 // ── Read ───────────────────────────────────────────────────────────────────────
-
-const getAllTeamsByCompanyService = async (companyId) => {
+export const getAllTeamsByCompanyService = async (companyId) => {
     return await Team.find({ companyId })
         .populate(TEAM_POPULATE)
         .sort({ createdAt: -1 });
 };
 
-const getTeamByIdService = async (id) => {
+export const getTeamByIdService = async (id) => {
     return await Team.findById(id).populate(TEAM_POPULATE);
 };
 
 // ── Update ─────────────────────────────────────────────────────────────────────
-
-const updateTeamService = async (id, data) => {
+export const updateTeamService = async (id, data) => {
     return await Team.findByIdAndUpdate(
         id,
         data,
@@ -36,12 +34,12 @@ const updateTeamService = async (id, data) => {
 };
 
 // ── Delete ─────────────────────────────────────────────────────────────────────
-
-const deleteTeamService = async (id) => {
+export const deleteTeamService = async (id) => {
     return await Team.findByIdAndDelete(id);
 };
 
-module.exports = {
+// كائن default موحد لتسهيل الاستدعاء
+export default {
     createTeamService,
     getAllTeamsByCompanyService,
     getTeamByIdService,

@@ -1,7 +1,8 @@
-const express = require('express');
-const auth = require('../../middleware/auth');
-const upload = require('../../middleware/upload');
-const fileController = require('./fileAttachment.controller');
+import express from 'express';
+// إضافة امتداد .js للـ middlewares والـ controller إجباري
+import auth from '../../middleware/auth.js';
+import upload from '../../middleware/upload.js';
+import * as fileController from './fileAttachment.controller.js';
 
 const router = express.Router();
 
@@ -22,4 +23,4 @@ router.post('/upload', upload.single('file'),   fileController.uploadFile);
 router.get('/:entity_type/:entity_id',          fileController.getFilesByEntity);
 router.delete('/:id',                           fileController.deleteFile);
 
-module.exports = router;
+export default router;

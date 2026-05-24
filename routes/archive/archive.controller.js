@@ -1,12 +1,12 @@
-const archiveService = require('./archive.service');
-const { Project }   = require('../../models/project.model');
-const { Task }      = require('../../models/task.model');
+// إضافة امتداد .js للملفات والموديلات المحلية إجباري
+import * as archiveService from './archive.service.js';
+import { Project } from '../../models/project.model.js';
+import { Task } from '../../models/task.model.js';
 
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 // ── POST /api/archive/project/:id ─────────────────────────────────────────────
-
-const archiveProject = async (req, res) => {
+export const archiveProject = async (req, res) => {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
         return res.status(400).json({ success: false, message: 'Invalid project id.' });
@@ -34,8 +34,7 @@ const archiveProject = async (req, res) => {
 };
 
 // ── POST /api/archive/task/:id ────────────────────────────────────────────────
-
-const archiveTask = async (req, res) => {
+export const archiveTask = async (req, res) => {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
         return res.status(400).json({ success: false, message: 'Invalid task id.' });
@@ -63,8 +62,7 @@ const archiveTask = async (req, res) => {
 };
 
 // ── GET /api/archive/company/:id ──────────────────────────────────────────────
-
-const getArchivedByCompany = async (req, res) => {
+export const getArchivedByCompany = async (req, res) => {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
         return res.status(400).json({ success: false, message: 'Invalid company id.' });
@@ -81,8 +79,7 @@ const getArchivedByCompany = async (req, res) => {
 
 // ── DELETE /api/archive/:id ───────────────────────────────────────────────────
 // Restore — tries Project first, then Task
-
-const restoreItem = async (req, res) => {
+export const restoreItem = async (req, res) => {
     const { id } = req.params;
     if (!isValidObjectId(id)) {
         return res.status(400).json({ success: false, message: 'Invalid id.' });
@@ -114,11 +111,4 @@ const restoreItem = async (req, res) => {
         console.error('[restoreItem]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
-};
-
-module.exports = {
-    archiveProject,
-    archiveTask,
-    getArchivedByCompany,
-    restoreItem
 };

@@ -1,13 +1,13 @@
-const Joi = require('joi');
+import Joi from 'joi';
+// إضافة امتداد .js لملف الخدمة والموديل إجباري
 import taskService from './task.service.js';
-const { validateTask, validateTaskUpdate } = require('../../models/task.model');
+import { validateTask, validateTaskUpdate } from '../../models/task.model.js';
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 // ── Create Task ────────────────────────────────────────────────────────────────
-
-const createTask = async (req, res) => {
+export const createTask = async (req, res) => {
     const { projectId } = req.params;
     if (!isValidObjectId(projectId)) {
         return res.status(400).json({ success: false, message: 'Invalid projectId in URL.' });
@@ -27,15 +27,14 @@ const createTask = async (req, res) => {
 };
 
 // ── Get All Tasks for a Project (with optional filters) ────────────────────────
-
-const getAllTasksByProject = async (req, res) => {
+export const getAllTasksByProject = async (req, res) => {
     const { projectId } = req.params;
     if (!isValidObjectId(projectId)) {
         return res.status(400).json({ success: false, message: 'Invalid projectId in URL.' });
     }
     const filters = {};
     const { status, assignedTo, priority } = req.query;
-    if (status)   filters.status   = status;
+    if (status)   filters.status    = status;
     if (priority) filters.priority = priority;
     if (assignedTo) {
         if (!isValidObjectId(assignedTo)) {
@@ -53,10 +52,9 @@ const getAllTasksByProject = async (req, res) => {
 };
 
 // ── Get My Tasks ───────────────────────────────────────────────────────────────
-
-const getMyTasks = async (req, res) => {
+export const getMyTasks = async (req, res) => {
     const filters = { assignedTo: req.user._id };
-    if (req.query.status)   filters.status   = req.query.status;
+    if (req.query.status)   filters.status    = req.query.status;
     if (req.query.priority) filters.priority = req.query.priority;
     try {
         const tasks = await taskService.getTasksByFilterService(filters);
@@ -68,8 +66,7 @@ const getMyTasks = async (req, res) => {
 };
 
 // ── Get Task by ID ─────────────────────────────────────────────────────────────
-
-const getTaskById = async (req, res) => {
+export const getTaskById = async (req, res) => {
     try {
         const task = await taskService.getTaskByIdService(req.params.id);
         if (!task) return res.status(404).json({ success: false, message: 'Task not found.' });
@@ -81,8 +78,7 @@ const getTaskById = async (req, res) => {
 };
 
 // ── Update Task ────────────────────────────────────────────────────────────────
-
-const updateTask = async (req, res) => {
+export const updateTask = async (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
         return res.status(400).json({ success: false, message: 'No data provided for update.' });
     }
@@ -102,8 +98,7 @@ const updateTask = async (req, res) => {
 };
 
 // ── Assign Task ────────────────────────────────────────────────────────────────
-
-const assignTask = async (req, res) => {
+export const assignTask = async (req, res) => {
     const { assignedTo } = req.body;
     if (assignedTo !== null && assignedTo !== undefined) {
         if (!isValidObjectId(String(assignedTo))) {
@@ -125,11 +120,7 @@ const assignTask = async (req, res) => {
 };
 
 // ── Link Task to Epic ──────────────────────────────────────────────────────────
-// PUT /api/tasks/:id/epic
-// Body: { "epicId": "<epicId>" }  → link to epic
-// Body: { "epicId": null }        → remove from epic
-
-const linkTaskToEpic = async (req, res) => {
+export const linkTaskToEpic = async (req, res) => {
     const { epicId } = req.body;
 
     if (epicId !== null && epicId !== undefined) {
@@ -154,8 +145,7 @@ const linkTaskToEpic = async (req, res) => {
 };
 
 // ── Delete Task ────────────────────────────────────────────────────────────────
-
-const deleteTask = async (req, res) => {
+export const deleteTask = async (req, res) => {
     try {
         const task = await taskService.deleteTaskService(req.params.id);
         if (!task) return res.status(404).json({ success: false, message: 'Task not found.' });
@@ -164,15 +154,4 @@ const deleteTask = async (req, res) => {
         console.error('[deleteTask]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
-};
-
-module.exports = {
-    createTask,
-    getAllTasksByProject,
-    getMyTasks,
-    getTaskById,
-    updateTask,
-    assignTask,
-    linkTaskToEpic,  // ← new
-    deleteTask
 };

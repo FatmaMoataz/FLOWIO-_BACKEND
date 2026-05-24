@@ -1,14 +1,16 @@
-const reportService = require('./report.service');
-const {
+// إضافة امتداد .js للملفات المحلية والـ validations إجباري
+import reportService from './report.service.js';
+import {
   createReportSchema,
   updateReportSchema,
   idParamSchema,
   allowedReportTypes
-} = require('../../validations/reportValidation');
+} from '../../validations/reportValidation.js';
 
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
-const createReport = async (req, res, next) => {
+// ── CREATE REPORT ──────────────────────────────────────────────────────────────
+export const createReport = async (req, res, next) => {
   const { error } = createReportSchema.validate(req.body);
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
@@ -26,7 +28,8 @@ const createReport = async (req, res, next) => {
   }
 };
 
-const getAllReports = async (req, res, next) => {
+// ── GET ALL REPORTS ────────────────────────────────────────────────────────────
+export const getAllReports = async (req, res, next) => {
   const filters = {};
 
   if (req.query.projectId) {
@@ -58,7 +61,8 @@ const getAllReports = async (req, res, next) => {
   }
 };
 
-const getReportById = async (req, res, next) => {
+// ── GET REPORT BY ID ───────────────────────────────────────────────────────────
+export const getReportById = async (req, res, next) => {
   const { error } = idParamSchema.validate({ id: req.params.id });
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
@@ -73,7 +77,8 @@ const getReportById = async (req, res, next) => {
   }
 };
 
-const updateReport = async (req, res, next) => {
+// ── UPDATE REPORT ──────────────────────────────────────────────────────────────
+export const updateReport = async (req, res, next) => {
   if (!req.body || Object.keys(req.body).length === 0) {
     return res.status(400).json({ success: false, message: 'No update data provided.' });
   }
@@ -92,7 +97,8 @@ const updateReport = async (req, res, next) => {
   }
 };
 
-const deleteReport = async (req, res, next) => {
+// ── DELETE REPORT ──────────────────────────────────────────────────────────────
+export const deleteReport = async (req, res, next) => {
   const { error } = idParamSchema.validate({ id: req.params.id });
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
@@ -105,12 +111,4 @@ const deleteReport = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-};
-
-module.exports = {
-  createReport,
-  getAllReports,
-  getReportById,
-  updateReport,
-  deleteReport
 };

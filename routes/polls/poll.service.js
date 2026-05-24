@@ -1,8 +1,9 @@
-const Poll = require("../../models/poll");
-const PollVote = require("../../models/pollVote");
+// إضافة امتداد .js للموديلات المحلية إجباري
+import Poll from "../../models/poll.js";
+import PollVote from "../../models/pollVote.js";
 
-// CREATE POLL
-const createPollService = async (data) => {
+// ── CREATE POLL ────────────────────────────────────────────────────────────────
+export const createPollService = async (data) => {
   const poll = await Poll.create(data);
 
   return {
@@ -12,8 +13,8 @@ const createPollService = async (data) => {
   };
 };
 
-// GET ALL POLLS
-const getAllPollsService = async () => {
+// ── GET ALL POLLS ──────────────────────────────────────────────────────────────
+export const getAllPollsService = async () => {
   const polls = await Poll.find()
     .populate("userId")
     .populate("postId")
@@ -26,8 +27,8 @@ const getAllPollsService = async () => {
   };
 };
 
-// VOTE
-const votePollService = async (data = {}) => {
+// ── VOTE ───────────────────────────────────────────────────────────────────────
+export const votePollService = async (data = {}) => {
   if (!data || typeof data !== "object") {
     throw new Error("Vote payload is missing or invalid");
   }
@@ -47,8 +48,8 @@ const votePollService = async (data = {}) => {
   };
 };
 
-// GET RESULTS
-const getPollResultsService = async (pollId) => {
+// ── GET RESULTS ────────────────────────────────────────────────────────────────
+export const getPollResultsService = async (pollId) => {
   const votes = await PollVote.find({ pollId });
 
   const result = {};
@@ -63,7 +64,8 @@ const getPollResultsService = async (pollId) => {
   };
 };
 
-module.exports = {
+// كائن default موحد لتسهيل الاستدعاء في الـ Controller
+export default {
   createPollService,
   getAllPollsService,
   votePollService,

@@ -1,10 +1,10 @@
-const Joi = require('joi');
-const { saveSummaryService, getSummaryService } = require('./summary.service');
+import Joi from 'joi';
+// إضافة امتداد .js للملفات المحلية إجباري
+import { saveSummaryService, getSummaryService } from './summary.service.js';
 
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 // ── Joi validation for incoming AI/manual summary payload ──────────────────────
-
 function validateSummaryPayload(data) {
     const schema = Joi.object({
         // transcript is optional on manual entry, required from AI
@@ -38,23 +38,7 @@ function validateSummaryPayload(data) {
 }
 
 // ── POST /api/meetings/:id/summary ────────────────────────────────────────────
-/**
- * Two use cases:
- *
- * 1. AI model is ready → partner's model POSTs here automatically after processing
- * 2. AI model not ready → you/frontend POST manually to test the flow
- *
- * Expected body:
- * {
- *   "transcript": "John said we need to fix...",
- *   "summaryText": ["Sara will fix login bug", "Mike reviews schema"],
- *   "tasks": [
- *     { "title": "Fix login bug", "assignedTo": "<userId>", "priority": "high" }
- *   ],
- *   "source": "ai"
- * }
- */
-const saveSummary = async (req, res) => {
+export const saveSummary = async (req, res) => {
     const { id: meetingId } = req.params;
 
     if (!isValidObjectId(meetingId)) {
@@ -89,15 +73,7 @@ const saveSummary = async (req, res) => {
 };
 
 // ── GET /api/meetings/:id/summary ─────────────────────────────────────────────
-/**
- * Returns the full MeetingLog for a meeting including:
- *  - transcript
- *  - summaryText (bullet points array)
- *  - summaryParagraph (flat string)
- *  - extracted_tasks with populated assignedTo and taskId
- *  - ai_status (so frontend knows if AI is still processing)
- */
-const getSummary = async (req, res) => {
+export const getSummary = async (req, res) => {
     const { id: meetingId } = req.params;
 
     if (!isValidObjectId(meetingId)) {
@@ -130,5 +106,3 @@ const getSummary = async (req, res) => {
         return res.status(500).json({ success: false, message: err.message });
     }
 };
-
-module.exports = { saveSummary, getSummary };

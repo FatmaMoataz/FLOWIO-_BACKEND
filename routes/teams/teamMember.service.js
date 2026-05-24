@@ -1,4 +1,5 @@
-const { TeamMember } = require('../../models/teamMember.model');
+// إضافة امتداد .js للموديل المحلي إجباري
+import { TeamMember } from '../../models/teamMember.model.js';
 
 // ── Shared populate config ─────────────────────────────────────────────────────
 const TEAM_MEMBER_POPULATE = [
@@ -7,33 +8,30 @@ const TEAM_MEMBER_POPULATE = [
 ];
 
 // ── Add Member ─────────────────────────────────────────────────────────────────
-
-const addTeamMemberService = async (data) => {
+export const addTeamMemberService = async (data) => {
     const member = await TeamMember.create(data);
     return await member.populate(TEAM_MEMBER_POPULATE);
 };
 
 // ── Read ───────────────────────────────────────────────────────────────────────
-
-const getMembersByTeamService = async (teamId) => {
+export const getMembersByTeamService = async (teamId) => {
     return await TeamMember.find({ teamId })
         .populate(TEAM_MEMBER_POPULATE)
         .sort({ joined_at: 1 });
 };
 
-const getTeamsByUserService = async (userId) => {
+export const getTeamsByUserService = async (userId) => {
     return await TeamMember.find({ userId })
         .populate(TEAM_MEMBER_POPULATE)
         .sort({ joined_at: -1 });
 };
 
-const getTeamMemberByIdService = async (id) => {
+export const getTeamMemberByIdService = async (id) => {
     return await TeamMember.findById(id).populate(TEAM_MEMBER_POPULATE);
 };
 
 // ── Update Role ────────────────────────────────────────────────────────────────
-
-const updateTeamMemberRoleService = async (id, role_in_team) => {
+export const updateTeamMemberRoleService = async (id, role_in_team) => {
     return await TeamMember.findByIdAndUpdate(
         id,
         { role_in_team },
@@ -42,12 +40,12 @@ const updateTeamMemberRoleService = async (id, role_in_team) => {
 };
 
 // ── Remove Member ──────────────────────────────────────────────────────────────
-
-const removeTeamMemberService = async (id) => {
+export const removeTeamMemberService = async (id) => {
     return await TeamMember.findByIdAndDelete(id);
 };
 
-module.exports = {
+// كائن default لتوفير المرونة الكاملة عند الاستيراد في الـ controller
+export default {
     addTeamMemberService,
     getMembersByTeamService,
     getTeamsByUserService,

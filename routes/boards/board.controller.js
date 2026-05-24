@@ -1,12 +1,12 @@
-const { Board, validateBoard, validateBoardUpdate } = require('../../models/board.model');
-const { KanbanColumn, validateColumn, validateColumnUpdate, validateReorder } = require('../../models/kanbanColumn.model');
+// إضافة امتداد .js للموديلات المحلية إجباري
+import { Board, validateBoard, validateBoardUpdate } from '../../models/board.model.js';
+import { KanbanColumn, validateColumn, validateColumnUpdate, validateReorder } from '../../models/kanbanColumn.model.js';
 
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 // ── POST /api/boards ───────────────────────────────────────────────────────────
 // Create a board for a project (one per project enforced by unique index)
-
-const createBoard = async (req, res) => {
+export const createBoard = async (req, res) => {
   const { error } = validateBoard(req.body);
   if (error) return res.status(400).json({ success: false, errors: error.details.map(d => d.message) });
 
@@ -32,8 +32,7 @@ const createBoard = async (req, res) => {
 
 // ── GET /api/boards/project/:projectId ────────────────────────────────────────
 // Get the board for a project with all columns and their tasks populated
-
-const getBoardByProject = async (req, res) => {
+export const getBoardByProject = async (req, res) => {
   const { projectId } = req.params;
 
   if (!isValidObjectId(projectId)) {
@@ -63,8 +62,7 @@ const getBoardByProject = async (req, res) => {
 
 // ── POST /api/boards/:boardId/columns ─────────────────────────────────────────
 // Add a new column to a board
-
-const addColumn = async (req, res) => {
+export const addColumn = async (req, res) => {
   const { boardId } = req.params;
 
   if (!isValidObjectId(boardId)) {
@@ -94,8 +92,7 @@ const addColumn = async (req, res) => {
 
 // ── GET /api/boards/:boardId/columns ──────────────────────────────────────────
 // Get all columns for a board sorted by order
-
-const getColumns = async (req, res) => {
+export const getColumns = async (req, res) => {
   const { boardId } = req.params;
 
   if (!isValidObjectId(boardId)) {
@@ -119,8 +116,7 @@ const getColumns = async (req, res) => {
 
 // ── PUT /api/boards/:boardId/columns/:columnId ────────────────────────────────
 // Update a column (name, status, or order)
-
-const updateColumn = async (req, res) => {
+export const updateColumn = async (req, res) => {
   const { boardId, columnId } = req.params;
 
   if (!isValidObjectId(boardId) || !isValidObjectId(columnId)) {
@@ -148,8 +144,7 @@ const updateColumn = async (req, res) => {
 
 // ── DELETE /api/boards/:boardId/columns/:columnId ─────────────────────────────
 // Delete a column from a board
-
-const deleteColumn = async (req, res) => {
+export const deleteColumn = async (req, res) => {
   const { boardId, columnId } = req.params;
 
   if (!isValidObjectId(boardId) || !isValidObjectId(columnId)) {
@@ -169,8 +164,7 @@ const deleteColumn = async (req, res) => {
 
 // ── PATCH /api/boards/:boardId/columns/reorder ────────────────────────────────
 // Drag-and-drop reorder — accepts array of { columnId, order }
-
-const reorderColumns = async (req, res) => {
+export const reorderColumns = async (req, res) => {
   const { boardId } = req.params;
 
   if (!isValidObjectId(boardId)) {
@@ -204,14 +198,4 @@ const reorderColumns = async (req, res) => {
     console.error('[reorderColumns]', err);
     return res.status(500).json({ success: false, message: err.message });
   }
-};
-
-module.exports = {
-  createBoard,
-  getBoardByProject,
-  addColumn,
-  getColumns,
-  updateColumn,
-  deleteColumn,
-  reorderColumns
 };

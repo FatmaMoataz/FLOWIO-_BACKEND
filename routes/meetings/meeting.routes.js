@@ -1,9 +1,13 @@
-const express = require('express');
-const auth = require('../../middleware/auth');
-const meetingController = require('./meeting.controller');
+import express from 'express';
+import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
+
+// إضافة امتداد .js للملفات والـ Middlewares المحلية إجباري
+import auth from '../../middleware/auth.js';
+import * as meetingController from './meeting.controller.js';
+import * as summaryController from './summary.controller.js';
 
 // Audio upload middleware — reuse existing multer but accept audio types
-const multer = require('multer');
 const audioUpload = multer({
     dest: 'uploads/audio/',
     limits: { fileSize: 500 * 1024 * 1024 }, // 500MB max for audio
@@ -43,12 +47,10 @@ router.patch('/:id/end',                    meetingController.endMeeting);
 router.post('/:id/process-audio', audioUpload.single('audio'), meetingController.processAudio);
 router.get('/:id/log',            meetingController.getMeetingLog);
 
-module.exports = router;
-
 // ── Summary Routes (added for Summary Module) ──────────────────────────────────
-const summaryController = require('./summary.controller');
-
 // POST /api/meetings/:id/summary  → save AI or manual summary + create tasks
 // GET  /api/meetings/:id/summary  → fetch summary, transcript, action items
 router.post('/:id/summary', summaryController.saveSummary);
 router.get('/:id/summary',  summaryController.getSummary);
+
+export default router;

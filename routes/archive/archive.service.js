@@ -1,9 +1,9 @@
-const { Project } = require('../../models/project.model');
-const { Task }    = require('../../models/task.model');
+// إضافة امتداد .js للموديلات المحلية
+import { Project } from '../../models/project.model.js';
+import { Task } from '../../models/task.model.js';
 
 // ── Archive Project ───────────────────────────────────────────────────────────
-
-const archiveProjectService = async (projectId) => {
+export const archiveProjectService = async (projectId) => {
     return await Project.findByIdAndUpdate(
         projectId,
         { isArchived: true, archivedAt: new Date(), status: 'archived' },
@@ -12,8 +12,7 @@ const archiveProjectService = async (projectId) => {
 };
 
 // ── Archive Task ──────────────────────────────────────────────────────────────
-
-const archiveTaskService = async (taskId) => {
+export const archiveTaskService = async (taskId) => {
     return await Task.findByIdAndUpdate(
         taskId,
         { isArchived: true, archivedAt: new Date() },
@@ -22,8 +21,7 @@ const archiveTaskService = async (taskId) => {
 };
 
 // ── Get All Archived Items for a Company ──────────────────────────────────────
-
-const getArchivedByCompanyService = async (companyId) => {
+export const getArchivedByCompanyService = async (companyId) => {
     const [projects, tasks] = await Promise.all([
         Project.find({ companyId, isArchived: true }).sort({ archivedAt: -1 }),
         Task.find({ isArchived: true })
@@ -39,8 +37,7 @@ const getArchivedByCompanyService = async (companyId) => {
 };
 
 // ── Restore (unarchive) Project or Task ───────────────────────────────────────
-
-const restoreProjectService = async (id) => {
+export const restoreProjectService = async (id) => {
     return await Project.findByIdAndUpdate(
         id,
         { isArchived: false, archivedAt: null, status: 'active' },
@@ -48,18 +45,10 @@ const restoreProjectService = async (id) => {
     );
 };
 
-const restoreTaskService = async (id) => {
+export const restoreTaskService = async (id) => {
     return await Task.findByIdAndUpdate(
         id,
         { isArchived: false, archivedAt: null },
         { new: true }
     );
-};
-
-module.exports = {
-    archiveProjectService,
-    archiveTaskService,
-    getArchivedByCompanyService,
-    restoreProjectService,
-    restoreTaskService
 };

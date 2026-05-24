@@ -1,6 +1,7 @@
-const { MeetingLog } = require('../../models/meetingLog.model');
-const { Task }       = require('../../models/task.model');
-const { Meeting }    = require('../../models/meeting.model');
+// إضافة امتداد .js للموديلات المحلية إجباري
+import { MeetingLog } from '../../models/meetingLog.model.js';
+import { Task }       from '../../models/task.model.js';
+import { Meeting }    from '../../models/meeting.model.js';
 
 // ── Shared populate ────────────────────────────────────────────────────────────
 const LOG_POPULATE = [
@@ -10,17 +11,7 @@ const LOG_POPULATE = [
 ];
 
 // ── Save Summary (POST) ────────────────────────────────────────────────────────
-/**
- * Accepts the AI model's output and saves it to MeetingLog.
- *
- * @param {string}   meetingId
- * @param {object}   payload
- * @param {string}   payload.transcript       - full text transcript
- * @param {string[]|string} payload.summaryText - bullet points array OR paragraph string
- * @param {object[]} payload.tasks            - extracted action items
- * @param {string}   source                   - 'ai' | 'manual'
- */
-const saveSummaryService = async (meetingId, payload, source = 'ai') => {
+export const saveSummaryService = async (meetingId, payload, source = 'ai') => {
     const { transcript, summaryText, tasks = [] } = payload;
 
     // Normalize summaryText — accept both array and plain string
@@ -60,15 +51,13 @@ const saveSummaryService = async (meetingId, payload, source = 'ai') => {
 };
 
 // ── Fetch Summary (GET) ────────────────────────────────────────────────────────
-
-const getSummaryService = async (meetingId) => {
+export const getSummaryService = async (meetingId) => {
     return await MeetingLog.findOne({ meetingId })
         .populate(LOG_POPULATE);
 };
 
 // ── Insert Action Items into Tasks collection ──────────────────────────────────
-
-const insertActionItems = async (meetingId, tasks = []) => {
+export const insertActionItems = async (meetingId, tasks = []) => {
     if (!tasks.length) return [];
 
     const meeting = await Meeting.findById(meetingId);
@@ -114,4 +103,9 @@ const insertActionItems = async (meetingId, tasks = []) => {
     return insertedTasks;
 };
 
-module.exports = { saveSummaryService, getSummaryService, insertActionItems };
+// عمل export default ككائن موحد لزيادة المرونة عند الاستدعاء في الـ Controller
+export default {
+    saveSummaryService,
+    getSummaryService,
+    insertActionItems
+};

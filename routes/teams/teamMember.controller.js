@@ -1,14 +1,12 @@
-const teamMemberService = require('./teamMember.service');
-const { validateTeamMember, validateTeamMemberUpdate } = require('../../models/teamMember.model');
+// إضافة امتداد .js للملفات والموديلات المحلية إجباري
+import teamMemberService from './teamMember.service.js';
+import { validateTeamMember, validateTeamMemberUpdate } from '../../models/teamMember.model.js';
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 // ── Add Member to Team ─────────────────────────────────────────────────────────
-// teamId  → from req.params (nested route: POST /teams/:teamId/members)
-// userId  → from req.body (who you're adding)
-
-const addTeamMember = async (req, res) => {
+export const addTeamMember = async (req, res) => {
     const { teamId } = req.params;
 
     if (!isValidObjectId(teamId)) {
@@ -40,8 +38,7 @@ const addTeamMember = async (req, res) => {
 };
 
 // ── Get All Members of a Team ──────────────────────────────────────────────────
-
-const getMembersByTeam = async (req, res) => {
+export const getMembersByTeam = async (req, res) => {
     const { teamId } = req.params;
 
     if (!isValidObjectId(teamId)) {
@@ -58,8 +55,7 @@ const getMembersByTeam = async (req, res) => {
 };
 
 // ── Update Member Role ─────────────────────────────────────────────────────────
-
-const updateTeamMemberRole = async (req, res) => {
+export const updateTeamMemberRole = async (req, res) => {
     const { error } = validateTeamMemberUpdate(req.body);
     if (error) {
         const messages = error.details.map(d => d.message);
@@ -82,8 +78,7 @@ const updateTeamMemberRole = async (req, res) => {
 };
 
 // ── Remove Member from Team ────────────────────────────────────────────────────
-
-const removeTeamMember = async (req, res) => {
+export const removeTeamMember = async (req, res) => {
     try {
         const member = await teamMemberService.removeTeamMemberService(req.params.memberId);
         if (!member) {
@@ -95,5 +90,3 @@ const removeTeamMember = async (req, res) => {
         return res.status(500).json({ success: false, message: err.message });
     }
 };
-
-module.exports = { addTeamMember, getMembersByTeam, updateTeamMemberRole, removeTeamMember };

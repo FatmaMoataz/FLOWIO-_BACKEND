@@ -1,16 +1,34 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const cors = require('cors');
+import dotenv from 'dotenv';
+dotenv.config();
 
-const users = require('./routes/users');
-const auth = require('./routes/auth');
-const posts = require('./routes/posts');
-const polls = require('./routes/poll');
-const notifications = require('./routes/notification');
-const reportRoutes = require('./routes/report/report.routes');
+import express from 'express';
+import mongoose from 'mongoose';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import cors from 'cors';
+
+// Imports للـ Routes (مع إضافة امتداد .js)
+import users from './routes/users.js';
+import auth from './routes/auth.js';
+import posts from './routes/posts.js';
+import polls from './routes/poll.js';
+import notifications from './routes/notification.js';
+import reportRoutes from './routes/report/report.routes.js';
+
+// Imports للـ Routes اللي كانت بتستدعى جوه الـ app.use مباشرة
+import companiesRoutes from './routes/companies.js';
+import communitiesRoutes from './routes/communities.js';
+import epicRoutes from './routes/epicRoutes.js';
+import invitationsRoutes from './routes/invitations.js';
+import projectRoutes from './routes/projects/project.routes.js';
+import taskRoutes from './routes/tasks/task.routes.js';
+import projectMemberRoutes from './routes/projectMembers/projectMember.routes.js';
+import teamRoutes from './routes/teams/team.routes.js';
+import fileAttachmentRoutes from './routes/files/fileAttachment.routes.js';
+import activityLogRoutes from './routes/activityLogs/activityLog.routes.js';
+import meetingRoutes from './routes/meetings/meeting.routes.js';
+import boardRoutes from './routes/boards/board.routes.js';
+import archiveRoutes from './routes/archive/archive.routes.js';
 
 const app = express();
 app.use(cors());
@@ -33,28 +51,28 @@ mongoose.connect(dbURI)
   .then(() => console.log('Connected to Flowio MongoDB Atlas! 🚀'))
   .catch((err) => console.log('DB Connection Error: ', err.message));
 
-// Models
-require('./models/user');
-require('./models/epic');
-require('./models/company');
-require('./models/invitation');
-require('./models/post');
-require('./models/comment');
-require('./models/poll');
-require('./models/pollVote');
-require('./models/notification');
-require('./models/report.model');
-require('./models/project.model');
-require('./models/task.model');
-require('./models/projectMember.model');
-require('./models/team.model');
-require('./models/teamMember.model');
-require('./models/fileAttachment.model');
-require('./models/activityLog.model');
-require('./models/meeting.model');
-require('./models/meetingLog.model');
-require('./models/refreshToken.model');
-require('./models/board.model');
+// Models Imports (لازم يستدعوا عشان الـ Schemas تتسجل في المونجوس)
+import './models/user.js';
+import './models/epic.js';
+import './models/company.js';
+import './models/invitation.js';
+import './models/post.js';
+import './models/comment.js';
+import './models/poll.js';
+import './models/pollVote.js';
+import './models/notification.js';
+import './models/report.model.js';
+import './models/project.model.js';
+import './models/task.model.js';
+import './models/projectMember.model.js';
+import './models/team.model.js';
+import './models/teamMember.model.js';
+import './models/fileAttachment.model.js';
+import './models/activityLog.model.js';
+import './models/meeting.model.js';
+import './models/meetingLog.model.js';
+import './models/refreshToken.model.js';
+import './models/board.model.js';
 
 // Middlewares
 app.use(express.json());
@@ -67,36 +85,35 @@ app.get('/test-me', (req, res) => res.send('Everything is OK!'));
 
 app.use('/api/users',       users);
 app.use('/api/auth',        auth);
-app.use('/api/companies',   require('./routes/companies'));
-app.use('/api/communities', require('./routes/communities.js'));
-app.use('/api/epics',       require('./routes/epicRoutes.js'));
-app.use('/api/invitations', require('./routes/invitations'));
+app.use('/api/companies',   companiesRoutes);
+app.use('/api/communities', communitiesRoutes);
+app.use('/api/epics',       epicRoutes);
+app.use('/api/invitations', invitationsRoutes);
 app.use('/api/posts',       posts);
-app.use('/api/polls',       require('./routes/poll'));
+app.use('/api/polls',       polls);
 app.use('/api/notifications', notifications);
-app.use('/api/reports', reportRoutes);
-app.use('/api/projects',    require('./routes/projects/project.routes'));
-app.use('/api/projects/:projectId/tasks',   require('./routes/tasks/task.routes'));
-app.use('/api/tasks',       require('./routes/tasks/task.routes'));
-app.use('/api/projects/:projectId/members', require('./routes/projectMembers/projectMember.routes'));
-app.use('/api/teams',       require('./routes/teams/team.routes'));
-app.use('/api/files',       require('./routes/files/fileAttachment.routes'));
-app.use('/api/activity',    require('./routes/activityLogs/activityLog.routes'));
-app.use('/api/meetings',    require('./routes/meetings/meeting.routes'));
-app.use('/api/boards',      require('./routes/boards/board.routes'));
-app.use('/api/archive', require('./routes/archive/archive.routes'));
+app.use('/api/reports',     reportRoutes);
+app.use('/api/projects',    projectRoutes);
+app.use('/api/projects/:projectId/tasks',   taskRoutes);
+app.use('/api/tasks',       taskRoutes);
+app.use('/api/projects/:projectId/members', projectMemberRoutes);
+app.use('/api/teams',       teamRoutes);
+app.use('/api/files',       fileAttachmentRoutes);
+app.use('/api/activity',    activityLogRoutes);
+app.use('/api/meetings',    meetingRoutes);
+app.use('/api/boards',      boardRoutes);
+app.use('/api/archive',     archiveRoutes);
 
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
     console.log('Morgan enabled...');
 }
 
-// Export for Vercel
-module.exports = app;
-
 // Only listen locally (not on Vercel)
 if (process.env.NODE_ENV !== 'production') {
     const port = process.env.PORT || 4000;
     app.listen(port, () => console.log(`Flowio Server listening on port ${port}...`));
 }
-module.exports = app;
+
+// Export default بدل module.exports عشان تناسب الـ ES6
+export default app;

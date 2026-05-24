@@ -1,6 +1,6 @@
 import express from 'express';
 import auth from '../middleware/auth.js';
-import invitationController from './invitations/invitation.controller.js';
+import * as invitationController from './invitations/invitation.controller.js';
 
 const router = express.Router();
 

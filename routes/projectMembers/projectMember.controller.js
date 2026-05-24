@@ -1,14 +1,12 @@
-const projectMemberService = require('./projectMember.service');
-const { validateProjectMember, validateProjectMemberUpdate } = require('../../models/projectMember.model');
+// إضافة امتداد .js للملفات والموديلات المحلية إجباري
+import projectMemberService from './projectMember.service.js';
+import { validateProjectMember, validateProjectMemberUpdate } from '../../models/projectMember.model.js';
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 // ── Add Member to Project ──────────────────────────────────────────────────────
-// projectId → from req.params (nested route: POST /projects/:projectId/members)
-// userId    → from req.body (who you're adding)
-
-const addMember = async (req, res) => {
+export const addMember = async (req, res) => {
     const { projectId } = req.params;
 
     if (!isValidObjectId(projectId)) {
@@ -41,8 +39,7 @@ const addMember = async (req, res) => {
 };
 
 // ── Get All Members of a Project ───────────────────────────────────────────────
-
-const getMembersByProject = async (req, res) => {
+export const getMembersByProject = async (req, res) => {
     const { projectId } = req.params;
 
     if (!isValidObjectId(projectId)) {
@@ -59,8 +56,7 @@ const getMembersByProject = async (req, res) => {
 };
 
 // ── Get All Projects a User Belongs To ────────────────────────────────────────
-
-const getProjectsByUser = async (req, res) => {
+export const getProjectsByUser = async (req, res) => {
     const { userId } = req.params;
 
     if (!isValidObjectId(userId)) {
@@ -77,8 +73,7 @@ const getProjectsByUser = async (req, res) => {
 };
 
 // ── Update Member Role ─────────────────────────────────────────────────────────
-
-const updateMemberRole = async (req, res) => {
+export const updateMemberRole = async (req, res) => {
     const { error } = validateProjectMemberUpdate(req.body);
     if (error) {
         const messages = error.details.map(d => d.message);
@@ -101,8 +96,7 @@ const updateMemberRole = async (req, res) => {
 };
 
 // ── Remove Member from Project ─────────────────────────────────────────────────
-
-const removeMember = async (req, res) => {
+export const removeMember = async (req, res) => {
     try {
         const member = await projectMemberService.removeMemberService(req.params.memberId);
         if (!member) {
@@ -113,12 +107,4 @@ const removeMember = async (req, res) => {
         console.error('[removeMember]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
-};
-
-module.exports = {
-    addMember,
-    getMembersByProject,
-    getProjectsByUser,
-    updateMemberRole,
-    removeMember
 };

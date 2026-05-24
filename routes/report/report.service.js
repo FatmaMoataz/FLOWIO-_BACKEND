@@ -1,6 +1,7 @@
-const { Report } = require('../../models/report.model');
+// إضافة امتداد .js للموديل المحلي إجباري
+import { Report } from '../../models/report.model.js';
 
-const createReportService = async (data) => {
+export const createReportService = async (data) => {
   const report = await Report.create(data);
   return {
     success: true,
@@ -9,7 +10,7 @@ const createReportService = async (data) => {
   };
 };
 
-const getAllReportsService = async (filters = {}) => {
+export const getAllReportsService = async (filters = {}) => {
   const reports = await Report.find(filters)
     .sort({ createdAt: -1 })
     .populate('userId', 'username email')
@@ -22,20 +23,20 @@ const getAllReportsService = async (filters = {}) => {
   };
 };
 
-const getReportByIdService = async (id) => {
+export const getReportByIdService = async (id) => {
   return await Report.findById(id)
     .populate('userId', 'username email')
     .populate('projectId', 'name status');
 };
 
-const updateReportService = async (id, data) => {
+export const updateReportService = async (id, data) => {
   return await Report.findByIdAndUpdate(id, data, {
     new: true,
     runValidators: true
   });
 };
 
-const deleteReportService = async (id) => {
+export const deleteReportService = async (id) => {
   const report = await Report.findByIdAndDelete(id);
   if (!report) {
     return {
@@ -49,7 +50,7 @@ const deleteReportService = async (id) => {
   };
 };
 
-module.exports = {
+export default {
   createReportService,
   getAllReportsService,
   getReportByIdService,

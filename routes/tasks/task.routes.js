@@ -1,6 +1,6 @@
 import express from 'express';
 import auth from '../../middleware/auth.js';
-import taskController from './task.controller.js';
+import * as taskController from './task.controller.js';
 
 const router = express.Router({ mergeParams: true });
 

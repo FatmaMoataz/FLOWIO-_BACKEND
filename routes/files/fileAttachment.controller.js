@@ -1,17 +1,15 @@
-const path = require('path');
-const fs = require('fs');
-const fileService = require('./fileAttachment.service');
-const { validateFileAttachment } = require('../../models/fileAttachment.model');
-const { logActivity } = require('../activityLogs/activityLog.service');
+import path from 'path';
+import fs from 'fs';
+// إضافة امتداد .js للملفات والموديلات المحلية إجباري
+import * as fileService from './fileAttachment.service.js';
+import { validateFileAttachment } from '../../models/fileAttachment.model.js';
+import { logActivity } from '../activityLogs/activityLog.service.js';
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 // ── Upload File ────────────────────────────────────────────────────────────────
-// multer middleware (upload.single('file')) runs before this in the route.
-// After multer runs, req.file contains the uploaded file info.
-
-const uploadFile = async (req, res) => {
+export const uploadFile = async (req, res) => {
     // Multer didn't attach a file — wrong field name or no file sent
     if (!req.file) {
         return res.status(400).json({ success: false, message: 'No file uploaded. Use field name: file' });
@@ -56,8 +54,7 @@ const uploadFile = async (req, res) => {
 };
 
 // ── Get All Files for an Entity ────────────────────────────────────────────────
-
-const getFilesByEntity = async (req, res) => {
+export const getFilesByEntity = async (req, res) => {
     const { entity_type, entity_id } = req.params;
 
     if (!isValidObjectId(entity_id)) {
@@ -74,8 +71,7 @@ const getFilesByEntity = async (req, res) => {
 };
 
 // ── Delete File ────────────────────────────────────────────────────────────────
-
-const deleteFile = async (req, res) => {
+export const deleteFile = async (req, res) => {
     try {
         const file = await fileService.getFileByIdService(req.params.id);
         if (!file) {
@@ -96,5 +92,3 @@ const deleteFile = async (req, res) => {
         return res.status(500).json({ success: false, message: err.message });
     }
 };
-
-module.exports = { uploadFile, getFilesByEntity, deleteFile };

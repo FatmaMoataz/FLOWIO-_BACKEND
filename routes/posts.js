@@ -1,5 +1,5 @@
 import express from 'express';
-import postController from './posts/post.controller.js';
+import * as postController from './posts/post.controller.js';
 import { validate } from '../middleware/validation.middleware.js';
 import { createPostSchema, updatePostSchema, idParamSchema, commentSchema } from '../validations/postValidation.js';
 
@@ -41,8 +41,6 @@ router.post(
   postController.likePost
 );
 
-export default router;
-
 router.delete(
   "/:id/like",
   validate(idParamSchema, "params"),
@@ -56,4 +54,4 @@ router.post(
   postController.addComment
 );
 
-module.exports = router;
+export default router;

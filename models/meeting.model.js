@@ -100,5 +100,3 @@ function validateMeetingUpdate(data) {
 }
 
 export { Meeting, meetingStatusEnum, validateMeeting, validateMeetingUpdate };
-
-module.exports = { Meeting, meetingStatusEnum, validateMeeting, validateMeetingUpdate };

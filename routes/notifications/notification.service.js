@@ -1,7 +1,8 @@
-const Notification = require("../../models/notification");
+// إضافة امتداد .js للموديل المحلي إجباري
+import Notification from "../../models/notification.js";
 
-// CREATE NOTIFICATION
-const createNotificationService = async (data) => {
+// ── CREATE NOTIFICATION ────────────────────────────────────────────────────────
+export const createNotificationService = async (data) => {
   const notification = await Notification.create(data);
 
   return {
@@ -11,8 +12,8 @@ const createNotificationService = async (data) => {
   };
 };
 
-// GET USER NOTIFICATIONS
-const getUserNotificationsService = async (userId) => {
+// ── GET USER NOTIFICATIONS ─────────────────────────────────────────────────────
+export const getUserNotificationsService = async (userId) => {
   const notifications = await Notification.find({ userId })
     .sort({ createdAt: -1 })
     .populate("userId fromUserId");
@@ -24,8 +25,8 @@ const getUserNotificationsService = async (userId) => {
   };
 };
 
-// MARK AS READ
-const markAsReadService = async (id) => {
+// ── MARK AS READ ───────────────────────────────────────────────────────────────
+export const markAsReadService = async (id) => {
   const notification = await Notification.findById(id);
 
   if (!notification) {
@@ -47,8 +48,8 @@ const markAsReadService = async (id) => {
   };
 };
 
-// DELETE NOTIFICATION
-const deleteNotificationService = async (id) => {
+// ── DELETE NOTIFICATION ────────────────────────────────────────────────────────
+export const deleteNotificationService = async (id) => {
   const notification = await Notification.findByIdAndDelete(id);
 
   if (!notification) {
@@ -64,7 +65,8 @@ const deleteNotificationService = async (id) => {
   };
 };
 
-module.exports = {
+// تصدير كـ default object ليتماشى مع طريقة الاستدعاء في الـ Controller
+export default {
   createNotificationService,
   getUserNotificationsService,
   markAsReadService,

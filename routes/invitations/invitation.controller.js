@@ -1,7 +1,8 @@
-const invitationService = require('./invitation.service');
-const { invitationStatusEnum } = require('../../models/invitation');
+import invitationService from './invitation.service.js';
+import { invitationStatusEnum } from '../../models/invitation.js';
+import { User } from '../../models/user.js'; // طلعنا الـ import فوق لـ clean architecture أفضل
 
-const createInvitation = async (req, res) => {
+export const createInvitation = async (req, res) => {
   try {
     const existing = await invitationService.getPendingInvitationByEmailService(req.body.emailInvited);
     if (existing) {
@@ -11,7 +12,7 @@ const createInvitation = async (req, res) => {
     const token = invitationService.generateInvitationToken();
     const invitation = await invitationService.createInvitationService({
       emailInvited: req.body.emailInvited,
-      companyId: req.body.companyId, // <--- السطر ده اللي ناقص ومسبب الـ 400!
+      companyId: req.body.companyId, // التعديل بتاعك موجود هنا تمام وزي الفل
       token,
       status: invitationStatusEnum.pending,
     });
@@ -22,7 +23,7 @@ const createInvitation = async (req, res) => {
   }
 };
 
-const handleInvitationResponse = async (req, res) => {
+export const handleInvitationResponse = async (req, res) => {
   try {
     const token = req.params.token;
     const status = req.path.includes('accept')
@@ -49,7 +50,7 @@ const handleInvitationResponse = async (req, res) => {
   }
 };
 
-const getAllInvitations = async (req, res) => {
+export const getAllInvitations = async (req, res) => {
   try {
     const invitations = await invitationService.getAllInvitationsService();
     res.status(200).json({ success: true, data: invitations });
@@ -58,7 +59,7 @@ const getAllInvitations = async (req, res) => {
   }
 };
 
-const getInvitationById = async (req, res) => {
+export const getInvitationById = async (req, res) => {
   try {
     const invitation = await invitationService.getInvitationByIdService(req.params.id);
     if (!invitation) {
@@ -70,7 +71,7 @@ const getInvitationById = async (req, res) => {
   }
 };
 
-const getInvitationByToken = async (req, res) => {
+export const getInvitationByToken = async (req, res) => {
   try {
     const invitation = await invitationService.getInvitationByTokenService(req.params.token);
     if (!invitation) {
@@ -85,7 +86,7 @@ const getInvitationByToken = async (req, res) => {
   }
 };
 
-const updateInvitation = async (req, res) => {
+export const updateInvitation = async (req, res) => {
   try {
     const existingInvitation = await invitationService.getInvitationByIdService(req.params.id);
     if (!existingInvitation) {
@@ -110,7 +111,7 @@ const updateInvitation = async (req, res) => {
   }
 };
 
-const deleteInvitation = async (req, res) => {
+export const deleteInvitation = async (req, res) => {
   try {
     const invitation = await invitationService.deleteInvitationService(req.params.id);
     if (!invitation) {
@@ -122,10 +123,9 @@ const deleteInvitation = async (req, res) => {
   }
 };
 
-// GET /api/invitations/my — pending invitations for the logged-in user
-const getMyInvitations = async (req, res) => {
+// GET /api/invitations/my
+export const getMyInvitations = async (req, res) => {
   try {
-    const { User } = require('../../models/user');
     const currentUser = await User.findById(req.user._id).select('email');
     if (!currentUser) {
       return res.status(404).json({ success: false, message: 'User not found.' });
@@ -135,15 +135,4 @@ const getMyInvitations = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
-};
-
-module.exports = {
-  createInvitation,
-  handleInvitationResponse,
-  getAllInvitations,
-  getMyInvitations,
-  getInvitationById,
-  getInvitationByToken,
-  updateInvitation,
-  deleteInvitation,
 };

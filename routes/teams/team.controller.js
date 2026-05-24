@@ -1,14 +1,12 @@
-const teamService = require('./team.service');
-const { validateTeam, validateTeamUpdate } = require('../../models/team.model');
+// إضافة امتداد .js للملفات والموديلات المحلية إجباري
+import teamService from './team.service.js';
+import { validateTeam, validateTeamUpdate } from '../../models/team.model.js';
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 // ── Create Team ────────────────────────────────────────────────────────────────
-// createdBy → injected from req.user._id (auth middleware)
-// companyId → from req.body (validated by Joi)
-
-const createTeam = async (req, res) => {
+export const createTeam = async (req, res) => {
     const { error } = validateTeam(req.body);
     if (error) {
         const messages = error.details.map(d => d.message);
@@ -28,8 +26,7 @@ const createTeam = async (req, res) => {
 };
 
 // ── Get All Teams by Company ───────────────────────────────────────────────────
-
-const getAllTeamsByCompany = async (req, res) => {
+export const getAllTeamsByCompany = async (req, res) => {
     const { companyId } = req.params;
 
     if (!isValidObjectId(companyId)) {
@@ -46,8 +43,7 @@ const getAllTeamsByCompany = async (req, res) => {
 };
 
 // ── Get Team by ID ─────────────────────────────────────────────────────────────
-
-const getTeamById = async (req, res) => {
+export const getTeamById = async (req, res) => {
     try {
         const team = await teamService.getTeamByIdService(req.params.id);
         if (!team) {
@@ -61,8 +57,7 @@ const getTeamById = async (req, res) => {
 };
 
 // ── Update Team ────────────────────────────────────────────────────────────────
-
-const updateTeam = async (req, res) => {
+export const updateTeam = async (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
         return res.status(400).json({ success: false, message: 'No data provided for update.' });
     }
@@ -86,8 +81,7 @@ const updateTeam = async (req, res) => {
 };
 
 // ── Delete Team ────────────────────────────────────────────────────────────────
-
-const deleteTeam = async (req, res) => {
+export const deleteTeam = async (req, res) => {
     try {
         const team = await teamService.deleteTeamService(req.params.id);
         if (!team) {
@@ -99,5 +93,3 @@ const deleteTeam = async (req, res) => {
         return res.status(500).json({ success: false, message: err.message });
     }
 };
-
-module.exports = { createTeam, getAllTeamsByCompany, getTeamById, updateTeam, deleteTeam };

@@ -1,12 +1,10 @@
-const activityLogService = require('./activityLog.service');
+import * as activityLogService from './activityLog.service.js';
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 // ── Get Logs for an Entity ─────────────────────────────────────────────────────
-// e.g. GET /api/activity/task/:entity_id  → all logs for a specific task
-
-const getLogsByEntity = async (req, res) => {
+export const getLogsByEntity = async (req, res) => {
     const { entity_type, entity_id } = req.params;
 
     if (!isValidObjectId(entity_id)) {
@@ -23,9 +21,7 @@ const getLogsByEntity = async (req, res) => {
 };
 
 // ── Get Logs by User ───────────────────────────────────────────────────────────
-// e.g. GET /api/activity/user/:userId → all actions performed by a user
-
-const getLogsByUser = async (req, res) => {
+export const getLogsByUser = async (req, res) => {
     const { userId } = req.params;
 
     if (!isValidObjectId(userId)) {
@@ -40,5 +36,3 @@ const getLogsByUser = async (req, res) => {
         return res.status(500).json({ success: false, message: err.message });
     }
 };
-
-module.exports = { getLogsByEntity, getLogsByUser };

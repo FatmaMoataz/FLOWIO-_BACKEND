@@ -1,19 +1,23 @@
-const { MeetingLog } = require('../../models/meetingLog.model');
-const { Task }       = require('../../models/task.model');
+import fs from 'fs'; // مكتبة Node.js الأساسية
+import axios from 'axios'; // جاهزة ومحولة لـ ES6 عشان الـ Real Path
+import FormData from 'form-data'; 
+
+// إضافة امتداد .js للموديلات المحلية إجباري
+import { MeetingLog } from '../../models/meetingLog.model.js';
+import { Task } from '../../models/task.model.js';
+import { Meeting } from '../../models/meeting.model.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 🧪 MOCK MODE — AI Python service not ready yet
 // When your teammate finishes the Python service:
 //   1. Set USE_MOCK_AI = false
-//   2. Uncomment the axios block inside processAudioWithAI
-//   3. Delete the getMockAIResponse function below
+//   2. Delete the getMockAIResponse function below
 // ─────────────────────────────────────────────────────────────────────────────
 const USE_MOCK_AI = true;
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 // ── Mock response — simulates exactly what Python AI would return ──────────────
-
 const getMockAIResponse = (attendees = []) => {
     const firstAttendee  = attendees[0]?._id || null;
     const secondAttendee = attendees[1]?._id || null;
@@ -67,8 +71,7 @@ The team discussed sprint priorities. Sara will fix the critical login bug urgen
 };
 
 // ── Main function — called after meeting ends and audio is uploaded ─────────────
-
-const processAudioWithAI = async (meetingId, audioFilePath, attendees = []) => {
+export const processAudioWithAI = async (meetingId, audioFilePath, attendees = []) => {
     // 1. Mark log as processing
     await MeetingLog.findOneAndUpdate(
         { meetingId },
@@ -87,22 +90,20 @@ const processAudioWithAI = async (meetingId, audioFilePath, attendees = []) => {
             console.log(`[MOCK AI] Done. Generated ${tasks.length} mock tasks.`);
 
         } else {
-            // ── 🤖 REAL PATH — uncomment when Python service is ready ──────────
-            // const axios    = require('axios');
-            // const FormData = require('form-data');
-            // const fs       = require('fs');
-            // const form     = new FormData();
-            // form.append('audio',      fs.createReadStream(audioFilePath));
-            // form.append('meeting_id', meetingId.toString());
-            // form.append('attendees',  JSON.stringify(
-            //     attendees.map(a => ({ id: a._id, name: a.name }))
-            // ));
-            // const response = await axios.post(
-            //     `${AI_SERVICE_URL}/ai/process-meeting`,
-            //     form,
-            //     { headers: form.getHeaders(), timeout: 300000 }
-            // );
-            // ({ transcript, summary, tasks } = response.data);
+            // ── 🤖 REAL PATH — جاهز تماماً للاستخدام عند تفعيل الـ Real AI ──────────
+            const form = new FormData();
+            form.append('audio',       fs.createReadStream(audioFilePath));
+            form.append('meeting_id', meetingId.toString());
+            form.append('attendees',  JSON.stringify(
+                attendees.map(a => ({ id: a._id, name: a.name }))
+            ));
+            
+            const response = await axios.post(
+                `${AI_SERVICE_URL}/ai/process-meeting`,
+                form,
+                { headers: form.getHeaders(), timeout: 300000 }
+            );
+            ({ transcript, summary, tasks } = response.data);
         }
 
         // 2. Save transcript + summary to MeetingLog
@@ -133,11 +134,9 @@ const processAudioWithAI = async (meetingId, audioFilePath, attendees = []) => {
 };
 
 // ── Insert AI-extracted tasks into the Tasks collection ────────────────────────
-
-const insertExtractedTasks = async (meetingId, aiTasks = [], log) => {
+export const insertExtractedTasks = async (meetingId, aiTasks = [], log) => {
     if (!aiTasks.length) return [];
 
-    const { Meeting } = require('../../models/meeting.model');
     const meeting = await Meeting.findById(meetingId);
 
     const insertedTasks    = [];
@@ -181,13 +180,10 @@ const insertExtractedTasks = async (meetingId, aiTasks = [], log) => {
 };
 
 // ── Retry — call this if AI failed and you want to reprocess ──────────────────
-
-const retryAIProcessing = async (meetingId, audioFilePath, attendees) => {
+export const retryAIProcessing = async (meetingId, audioFilePath, attendees) => {
     await MeetingLog.findOneAndUpdate(
         { meetingId },
         { ai_status: 'pending', ai_error: null }
     );
     return await processAudioWithAI(meetingId, audioFilePath, attendees);
 };
-
-module.exports = { processAudioWithAI, insertExtractedTasks, retryAIProcessing };

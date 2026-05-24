@@ -1,14 +1,16 @@
-const express = require('express');
+import express from 'express';
+// إضافة امتداد .js للملفات المحلية إجباري
+import auth from '../../middleware/auth.js';
+import * as boardController from './board.controller.js';
+
 const router = express.Router();
-const auth = require('../../middleware/auth');
-const boardController = require('./board.controller');
 
 // All board routes require authentication
 router.use(auth);
 
 // ── Board ──────────────────────────────────────────────────────────────────────
-// POST  /api/boards                          → create board for a project
-// GET   /api/boards/project/:projectId       → get board + columns + tasks
+// POST   /api/boards                          → create board for a project
+// GET    /api/boards/project/:projectId       → get board + columns + tasks
 
 router.post('/',                          boardController.createBoard);
 router.get('/project/:projectId',         boardController.getBoardByProject);
@@ -28,4 +30,4 @@ router.patch('/:boardId/columns/reorder',             boardController.reorderCol
 router.put('/:boardId/columns/:columnId',             boardController.updateColumn);
 router.delete('/:boardId/columns/:columnId',          boardController.deleteColumn);
 
-module.exports = router;
+export default router;

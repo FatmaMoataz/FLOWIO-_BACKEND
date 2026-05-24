@@ -1,13 +1,13 @@
-const meetingService = require('./meeting.service');
-const aiService = require('./aiIntegration.service');
-const { validateMeeting, validateMeetingUpdate } = require('../../models/meeting.model');
-const { logActivity } = require('../activityLogs/activityLog.service');
+// إضافة امتداد .js للملفات والموديلات المحلية إجباري
+import meetingService from './meeting.service.js';
+import * as aiService from './aiIntegration.service.js';
+import { validateMeeting, validateMeetingUpdate } from '../../models/meeting.model.js';
+import { logActivity } from '../activityLogs/activityLog.service.js';
 
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 // ── Create Meeting ─────────────────────────────────────────────────────────────
-
-const createMeeting = async (req, res) => {
+export const createMeeting = async (req, res) => {
     const { error } = validateMeeting(req.body);
     if (error) {
         return res.status(400).json({ success: false, errors: error.details.map(d => d.message) });
@@ -30,8 +30,7 @@ const createMeeting = async (req, res) => {
 };
 
 // ── Get All Meetings for a Project ─────────────────────────────────────────────
-
-const getMeetingsByProject = async (req, res) => {
+export const getMeetingsByProject = async (req, res) => {
     const { projectId } = req.params;
 
     if (!isValidObjectId(projectId)) {
@@ -48,8 +47,7 @@ const getMeetingsByProject = async (req, res) => {
 };
 
 // ── Get Single Meeting ─────────────────────────────────────────────────────────
-
-const getMeetingById = async (req, res) => {
+export const getMeetingById = async (req, res) => {
     try {
         const meeting = await meetingService.getMeetingByIdService(req.params.id);
         if (!meeting) {
@@ -63,8 +61,7 @@ const getMeetingById = async (req, res) => {
 };
 
 // ── Start Meeting ──────────────────────────────────────────────────────────────
-
-const startMeeting = async (req, res) => {
+export const startMeeting = async (req, res) => {
     try {
         const meeting = await meetingService.startMeetingService(req.params.id);
         if (!meeting) {
@@ -78,8 +75,7 @@ const startMeeting = async (req, res) => {
 };
 
 // ── End Meeting ────────────────────────────────────────────────────────────────
-
-const endMeeting = async (req, res) => {
+export const endMeeting = async (req, res) => {
     try {
         const meeting = await meetingService.endMeetingService(req.params.id);
         if (!meeting) {
@@ -101,8 +97,7 @@ const endMeeting = async (req, res) => {
 };
 
 // ── Update Meeting ─────────────────────────────────────────────────────────────
-
-const updateMeeting = async (req, res) => {
+export const updateMeeting = async (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
         return res.status(400).json({ success: false, message: 'No data provided for update.' });
     }
@@ -125,8 +120,7 @@ const updateMeeting = async (req, res) => {
 };
 
 // ── Delete Meeting ─────────────────────────────────────────────────────────────
-
-const deleteMeeting = async (req, res) => {
+export const deleteMeeting = async (req, res) => {
     try {
         const meeting = await meetingService.deleteMeetingService(req.params.id);
         if (!meeting) {
@@ -140,10 +134,7 @@ const deleteMeeting = async (req, res) => {
 };
 
 // ── Upload Audio + Trigger AI ──────────────────────────────────────────────────
-// After a meeting ends, the frontend uploads the recorded audio.
-// This endpoint sends it to the Python AI service for processing.
-
-const processAudio = async (req, res) => {
+export const processAudio = async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, message: 'No audio file uploaded. Use field name: audio' });
     }
@@ -176,8 +167,7 @@ const processAudio = async (req, res) => {
 };
 
 // ── Get Meeting Log (AI results) ───────────────────────────────────────────────
-
-const getMeetingLog = async (req, res) => {
+export const getMeetingLog = async (req, res) => {
     try {
         const log = await meetingService.getMeetingLogService(req.params.id);
         if (!log) {
@@ -188,16 +178,4 @@ const getMeetingLog = async (req, res) => {
         console.error('[getMeetingLog]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
-};
-
-module.exports = {
-    createMeeting,
-    getMeetingsByProject,
-    getMeetingById,
-    startMeeting,
-    endMeeting,
-    updateMeeting,
-    deleteMeeting,
-    processAudio,
-    getMeetingLog
 };
