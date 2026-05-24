@@ -1,6 +1,5 @@
 const jwt   = require('jsonwebtoken');
 const crypto = require('crypto'); // built-in Node.js — no install needed
-const config = require('config');
 
 // ── Token lifetimes ────────────────────────────────────────────────────────────
 const ACCESS_TOKEN_EXPIRY  = '15m';   // short-lived  — expires in 15 minutes
@@ -17,7 +16,7 @@ const generateAccessToken = (user) => {
             role: user.role,
             email: user.email
         },
-        config.get('jwtPrivateKey'),
+        process.env.JWT_PRIVATE_KEY,
         { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
 };
@@ -40,7 +39,7 @@ const hashToken = (token) => {
 // ── Verify Access Token ────────────────────────────────────────────────────────
 
 const verifyAccessToken = (token) => {
-    return jwt.verify(token, config.get('jwtPrivateKey'));
+    return jwt.verify(token, process.env.JWT_PRIVATE_KEY);
 };
 
 // ── Get expiry Date object for refresh token ───────────────────────────────────

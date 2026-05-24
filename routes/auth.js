@@ -2,7 +2,6 @@ const express = require('express');
 const Joi     = require('joi');
 const bcrypt  = require('bcrypt');
 const crypto  = require('crypto');
-const config  = require('config');
 const router  = express.Router();
 const nodemailer = require('nodemailer');
 
@@ -21,8 +20,8 @@ const auth = require('../middleware/auth');
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: config.get('emailUser'),
-    pass: config.get('emailPassword')
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
   }
 });
 
@@ -183,10 +182,10 @@ router.post('/forgot-password', async (req, res) => {
     const resetToken = user.generatePasswordResetToken();
     await user.save();
 
-    const resetUrl = `${config.get('clientUrl')}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
     await transporter.sendMail({
-      from:    config.get('emailUser'),
+      from:    process.env.EMAIL_USER,
       to:      user.email,
       subject: 'Password Reset Request — Flowio',
       html: `
