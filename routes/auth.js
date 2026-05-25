@@ -70,8 +70,8 @@ router.post('/signup', async (req, res) => {
       email,
       password: hashedPassword,
       company: company || null,
-      role: role || null,
-      specialization: role || 'Employee'
+      role: role || 'team-member'
+      // specialization will use default value 'none' from schema
     });
 
     await user.save();
