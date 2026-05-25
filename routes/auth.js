@@ -27,6 +27,17 @@ const transporter = nodemailer.createTransport({
 const router = express.Router();
 
 // ── Joi validation ────────────────────────────────────────────────────────────
+function validateSignup(data) {
+  const schema = Joi.object({
+    fullName: Joi.string().min(3).max(50).required(),
+    email:    Joi.string().email().required(),
+    password: Joi.string().min(6).required(),
+    company:  Joi.string().optional(),
+    role:     Joi.string().optional()
+  });
+  return schema.validate(data);
+}
+
 function validateLogin(data) {
   const schema = Joi.object({
     email:    Joi.string().email().required(),
@@ -34,6 +45,72 @@ function validateLogin(data) {
   });
   return schema.validate(data);
 }
+
+// ========================================
+// 0️⃣  POST /api/auth/signup
+// ========================================
+router.post('/signup', async (req, res) => {
+  const { error } = validateSignup(req.body);
+  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
+
+  try {
+    const { fullName, email, password, company, role } = req.body;
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+    if (user) return res.status(400).json({ success: false, message: 'User already exists with this email.' });
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create new user
+    user = new User({
+      name: fullName,
+      email,
+      password: hashedPassword,
+      company: company || null,
+      role: role || null,
+      specialization: role || 'Employee'
+    });
+
+    await user.save();
+
+    // Generate tokens
+    const accessToken        = generateAccessToken(user);
+    const rawRefreshToken    = generateRefreshToken();
+    const hashedRefreshToken = hashToken(rawRefreshToken);
+
+    await RefreshToken.create({
+      userId:    user._id,
+      token:     hashedRefreshToken,
+      expiresAt: getRefreshTokenExpiry(),
+      userAgent: req.headers['user-agent'] || '',
+      ipAddress: req.ip || ''
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Account created successfully!',
+      token: accessToken,  // Frontend expects response.data.token
+      data: {
+        accessToken,
+        refreshToken: rawRefreshToken,
+        user: {
+          _id:            user._id,
+          name:           user.name,
+          email:          user.email,
+          role:           user.role,
+          company:        user.company,
+          specialization: user.specialization
+        }
+      }
+    });
+  } catch (err) {
+    console.error('[POST /auth/signup]', err);
+    return res.status(500).json({ success: false, message: 'Error: ' + err.message });
+  }
+});
 
 // ========================================
 // 1️⃣  POST /api/auth/login
@@ -66,6 +143,7 @@ router.post('/login', async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      token: accessToken,  // Frontend expects response.data.token
       data: {
         accessToken,
         refreshToken: rawRefreshToken,
@@ -259,6 +337,66 @@ router.post('/reset-password', async (req, res) => {
     });
   } catch (err) {
     console.error('[POST /auth/reset-password]', err);
+    return res.status(500).json({ success: false, message: 'Error: ' + err.message });
+  }
+});
+
+// ========================================
+// 7️⃣  POST /api/auth/google
+// ========================================
+router.post('/google', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required for Google authentication.' });
+    }
+
+    // Check if user exists
+    let user = await User.findOne({ email });
+
+    // If user doesn't exist, create new Google-only account (no password)
+    if (!user) {
+      user = new User({
+        name: email.split('@')[0],  // Use email prefix as name
+        email,
+        password: null,  // Google-only accounts have no password
+        specialization: 'Employee'
+      });
+      await user.save();
+    }
+
+    // Generate tokens
+    const accessToken        = generateAccessToken(user);
+    const rawRefreshToken    = generateRefreshToken();
+    const hashedRefreshToken = hashToken(rawRefreshToken);
+
+    await RefreshToken.create({
+      userId:    user._id,
+      token:     hashedRefreshToken,
+      expiresAt: getRefreshTokenExpiry(),
+      userAgent: req.headers['user-agent'] || '',
+      ipAddress: req.ip || ''
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Google authentication successful!',
+      token: accessToken,  // Frontend expects response.data.token
+      data: {
+        accessToken,
+        refreshToken: rawRefreshToken,
+        user: {
+          _id:            user._id,
+          name:           user.name,
+          email:          user.email,
+          role:           user.role,
+          specialization: user.specialization
+        }
+      }
+    });
+  } catch (err) {
+    console.error('[POST /auth/google]', err);
     return res.status(500).json({ success: false, message: 'Error: ' + err.message });
   }
 });
