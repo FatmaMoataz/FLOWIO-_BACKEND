@@ -47,9 +47,20 @@ if (!dbURI) {
     process.exit(1);
 }
 
-mongoose.connect(dbURI)
+mongoose.connect(dbURI, {
+  tls: true,
+  tlsInsecure: false,
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 30000,
+  maxPoolSize: 10,
+  minPoolSize: 1,
+  maxIdleTimeMS: 45000,
+})
   .then(() => console.log('Connected to Flowio MongoDB Atlas! 🚀'))
-  .catch((err) => console.log('DB Connection Error: ', err.message));
+  .catch((err) => {
+    console.error('DB Connection Error:', err.message);
+    process.exit(1);  // Exit if DB connection fails
+  });
 
 // Models Imports (لازم يستدعوا عشان الـ Schemas تتسجل في المونجوس)
 import './models/user.js';
