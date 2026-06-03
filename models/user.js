@@ -58,7 +58,9 @@ const userSchema = new mongoose.Schema(
 // ✅ Generate JWT with role included for authorization
 userSchema.methods.generateAuthToken = function () {
   const token = jwt.sign(
-    { _id: this._id, role: this.role },
+    { _id: this._id, role: this.role,
+      companyId: this.companyId
+     },
     process.env.JWT_PRIVATE_KEY
   );
   return token;
