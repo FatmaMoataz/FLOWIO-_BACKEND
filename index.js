@@ -31,7 +31,12 @@ import boardRoutes from './routes/boards/board.routes.js';
 import archiveRoutes from './routes/archive/archive.routes.js';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
+  credentials: true
+}));
 
 // JWT key check - use environment variable
 const jwtKey = process.env.JWT_PRIVATE_KEY;
