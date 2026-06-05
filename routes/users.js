@@ -10,7 +10,6 @@ const router = express.Router();
 
 // ── GET /api/users/me ──────────────────────────────────────────────────────────
 // Get current logged-in user's full profile
-
 router.get('/me', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user._id)
@@ -24,10 +23,32 @@ router.get('/me', auth, async (req, res) => {
     }
 });
 
+// ── 🌟 جـديـد: GET /api/users/search ──────────────────────────────────────────
+// البحث عن مستخدم بواسطة البريد الإلكتروني (يجب وضعه فوق راوت /:id لمنع التعارض)
+router.get('/search', auth, async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Email query parameter is required.' });
+        }
+
+        // البحث عن المستخدم باستخدام الإيميل الممرر (بدون حساسّية لحالة الأحرف)
+        const user = await User.findOne({ email: email.trim().toLowerCase() })
+            .select('_id name email specialization');
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'No user found with this email.' });
+        }
+
+        return res.status(200).json({ success: true, data: user });
+    } catch (err) {
+        console.error('[GET /users/search]', err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // ── PUT /api/users/me ──────────────────────────────────────────────────────────
 // Update current user's profile (name, specialization, companyId)
-// Email, password, and role are intentionally excluded — handled separately
-
 router.put('/me', auth, async (req, res) => {
     const { error } = validateProfileUpdate(req.body);
     if (error) {
@@ -54,7 +75,6 @@ router.put('/me', auth, async (req, res) => {
 
 // ── PUT /api/users/me/password ─────────────────────────────────────────────────
 // Change password — requires current password for verification
-
 router.put('/me/password', auth, async (req, res) => {
     const { error } = validatePasswordChange(req.body);
     if (error) {
@@ -65,13 +85,11 @@ router.put('/me/password', auth, async (req, res) => {
         const user = await User.findById(req.user._id);
         if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
-        // Verify current password before allowing change
         const validPassword = await bcrypt.compare(req.body.currentPassword, user.password);
         if (!validPassword) {
             return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
         }
 
-        // Hash and save new password
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(req.body.newPassword, salt);
         await user.save();
@@ -84,8 +102,7 @@ router.put('/me/password', auth, async (req, res) => {
 });
 
 // ── GET /api/users/:id ─────────────────────────────────────────────────────────
-// Get any user's public profile — password and sensitive fields excluded
-
+// Get any user's public profile — (تأتي بالأسفل حتى لا تبتلع مسار /search)
 router.get('/:id', auth, async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
@@ -100,7 +117,6 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // ── POST /api/users — Register ─────────────────────────────────────────────────
-
 router.post('/', async (req, res) => {
     const { error } = validate(req.body);
     if (error) return res.status(400).send(error.details[0].message);
@@ -119,7 +135,6 @@ router.post('/', async (req, res) => {
 });
 
 // ── Joi Validation helpers ─────────────────────────────────────────────────────
-
 function validateProfileUpdate(data) {
     const schema = Joi.object({
         name: Joi.string().min(3).max(50).optional(),
