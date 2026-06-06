@@ -2,20 +2,20 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import http from 'http'; // 1. استيراد الهيدر بتاع الـ HTTP
+import { Server } from 'socket.io'; // 2. استيراد السوكيت
 import mongoose from 'mongoose';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cors from 'cors';
 
-// Imports للـ Routes (مع إضافة امتداد .js)
+// Imports للـ Routes
 import users from './routes/users.js';
 import auth from './routes/auth.js';
 import posts from './routes/posts.js';
 import polls from './routes/poll.js';
 import notifications from './routes/notification.js';
 import reportRoutes from './routes/report/report.routes.js';
-
-// Imports للـ Routes اللي كانت بتستدعى جوه الـ app.use مباشرة
 import companiesRoutes from './routes/companies.js';
 import communitiesRoutes from './routes/communities.js';
 import epicRoutes from './routes/epicRoutes.js';
@@ -29,8 +29,13 @@ import activityLogRoutes from './routes/activityLogs/activityLog.routes.js';
 import meetingRoutes from './routes/meetings/meeting.routes.js';
 import boardRoutes from './routes/boards/board.routes.js';
 import archiveRoutes from './routes/archive/archive.routes.js';
+import messageRoutes from './routes/messages/message.routes.js'; // 3. استيراد راوت الرسايل الجديد
 
 const app = express();
+
+// عمل الـ Server الخارجي اللي هيربط Express مع Socket.io
+const server = http.createServer(app); 
+
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' , 'PATCH'],
@@ -38,7 +43,15 @@ app.use(cors({
   credentials: true
 }));
 
-// JWT key check - use environment variable
+// إعداد الـ Socket.io وتمرير الـ Server له
+const io = new Server(server, {
+  cors: {
+    origin: '*', // تقدري تحددي بورت الفرونت إند هنا لو حابة حماية أكتر
+    methods: ['GET', 'POST']
+  }
+});
+
+// JWT key check
 const jwtKey = process.env.JWT_PRIVATE_KEY;
 if (!jwtKey) {
     console.error('FATAL ERROR: JWT_PRIVATE_KEY is not defined.');
@@ -64,10 +77,10 @@ mongoose.connect(dbURI, {
   .then(() => console.log('Connected to Flowio MongoDB Atlas! 🚀'))
   .catch((err) => {
     console.error('DB Connection Error:', err.message);
-    process.exit(1);  // Exit if DB connection fails
+    process.exit(1);
   });
 
-// Models Imports (لازم يستدعوا عشان الـ Schemas تتسجل في المونجوس)
+// Models Imports
 import './models/user.js';
 import './models/epic.js';
 import './models/company.js';
@@ -89,6 +102,7 @@ import './models/meeting.model.js';
 import './models/meetingLog.model.js';
 import './models/refreshToken.model.js';
 import './models/board.model.js';
+import './models/message.model.js'; // 4. استيراد الموديل الجديد هنا
 
 // Middlewares
 app.use(express.json());
@@ -97,7 +111,6 @@ app.use(express.static('public'));
 app.use(helmet());
 
 // ── Base Routes ────────────────────────────────────────────────────────────────
-// الدالة الترحيبية لمنع الـ 404 عند الدخول على الرابط الرئيسي مباشرة
 app.get('/', (req, res) => {
     res.status(200).json({
         success: true,
@@ -129,17 +142,45 @@ app.use('/api/activity',    activityLogRoutes);
 app.use('/api/meetings',    meetingRoutes);
 app.use('/api/boards',      boardRoutes);
 app.use('/api/archive',     archiveRoutes);
+app.use('/api/messages',    messageRoutes); // 5. تشغيل راوت الرسايل
 
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
     console.log('Morgan enabled...');
 }
 
-// Only listen locally (not on Vercel)
+// ── Socket.io Logic ───────────────────────────────────────────────────────────
+import messageController from './routes/messages/message.controller.js';
+
+io.on('connection', (socket) => {
+    // لما اليوزر يفتح شات روم معينة
+    socket.on('join_room', (roomName) => {
+        socket.join(roomName);
+    });
+
+    // استقبال رسايل الشات في الوقت الفعلي
+    socket.on('send_message', async (data) => {
+        try {
+            const savedMessage = await messageController.handleIncomingMessage({
+                room: data.room,
+                sender: data.sender, // ده الـ User ID
+                text: data.text
+            });
+
+            // بث الرسالة كاملة بعد الـ populate لكل اللي في الأوضة
+            io.to(data.room).emit('receive_message', savedMessage);
+        } catch (err) {
+            socket.emit('error_status', { message: err.message });
+        }
+    });
+
+    socket.on('disconnect', () => {});
+});
+
+// تشغيل الـ server بدلاً من app
 if (process.env.NODE_ENV !== 'production') {
     const port = process.env.PORT || 4000;
-    app.listen(port, () => console.log(`Flowio Server listening on port ${port}...`));
+    server.listen(port, () => console.log(`Flowio Server listening on port ${port}...`));
 }
 
-// Export default بدل module.exports عشان تناسب الـ ES6
 export default app;
