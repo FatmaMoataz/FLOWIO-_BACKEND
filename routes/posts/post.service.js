@@ -1,11 +1,59 @@
 import Post from '../../models/post.js';
 import Poll from '../../models/poll.js';
 import Comment from '../../models/comment.js';
+import mongoose from 'mongoose'; // 👈 ضفنا الـ import ده عشان نستخدم الموديلات التانية ديناميكياً
 
+// ── دالة مساعدة لحساب وحقن تفاصيل الـ Poll جوه البوست 🗳️ ──
+const injectPollResults = async (post, currentUserId) => {
+  if (!post.pollId) return post;
+
+  // تحويل الـ post لـ plain object عشان نقدر نعدل عليه بحرية ونضيف حقول جديدة
+  const postObj = post.toObject ? post.toObject({ virtuals: true }) : post;
+  const poll = postObj.pollId;
+
+  if (poll && poll.options) {
+    try {
+      // 1. جلب كل الأصوات للـ Poll ده من جدول الـ PollVote
+      const votes = await mongoose.model("PollVote").find({ pollId: poll._id });
+      
+      // 2. حساب الـ Breakdown لخيارات التصويت (هيبدأ بـ صفر لكل اختيار)
+      const breakdown = {};
+      poll.options.forEach(opt => {
+        breakdown[opt.text] = 0;
+      });
+
+      // زياوة عداد الأصوات الحقيقية
+      votes.forEach(v => {
+        if (breakdown[v.optionText] !== undefined) {
+          breakdown[v.optionText]++;
+        }
+      });
+
+      // 3. معرفة إذا كان المستخدم الحالي صوّت وعلى أنهي خيار بالظبط
+      let userVote = null;
+      if (currentUserId) {
+        const foundVote = votes.find(v => v.userId.toString() === currentUserId.toString());
+        // لو صوّت، هنجيب الـ index (المكان) بتاع الاختيار ده في المصفوفة عشان الـ UI ينور عنده
+        userVote = foundVote ? poll.options.findIndex(opt => opt.text === foundVote.optionText) : null;
+      }
+
+      // دمج البيانات الجديدة جوه الـ poll object عشان الفرونت إند يقرأها علطول 🎉
+      postObj.pollId.breakdown = breakdown;
+      postObj.pollId.totalVotes = votes.length;
+      postObj.pollId.userVote = userVote; // هيرجع الـ index بتاعه (0, 1, 2...) أو null لو مّصوتش
+    } catch (err) {
+      console.error("Error embedding poll results to post:", err);
+    }
+  }
+
+  return postObj;
+};
+
+// ── CREATE POST ────────────────────────────────────────────────────────────────
 const createPostService = async (data) => {
   let createdPollId = null;
 
-  // لو البوست جاي معاه بيانات تصويت، هنكريت الـ Poll الأول 🗳️
+  // 1️⃣ لو البوست جاي معاه بيانات تصويت، هنكريت الـ Poll الأول 🗳️
   if (data.pollData && data.pollData.question) {
     const newPoll = await Poll.create({
       question: data.pollData.question,
@@ -16,9 +64,12 @@ const createPostService = async (data) => {
     createdPollId = newPoll._id;
   }
 
+  // 2️⃣ تفكيك الداتا عشان نستبعد الـ pollData تماماً ونحمي المونجوز Schema 🛡️
+  const { pollData, ...cleanData } = data;
+
   // إنشاء البوست وربطه بالـ Poll لو اتوجدت
   const postData = {
-    ...data,
+    ...cleanData,
     pollId: createdPollId || data.pollId
   };
 
@@ -30,15 +81,20 @@ const createPostService = async (data) => {
 
   await post.populate("communityId userId pollId");
 
+  // حقن تفاصيل الـ poll النظيف للبوست اللي راجع فوراً
+  const completePost = await injectPollResults(post, data.userId);
+
   return {
     success: true,
     message: "Post created successfully",
-    data: post
+    data: completePost
   };
 };
 
-const getAllPostsService = async () => {
+// ── GET ALL POSTS ──────────────────────────────────────────────────────────────
+const getAllPostsService = async (currentUserId) => {
   const posts = await Post.find()
+    .sort({ createdAt: -1 }) // ترتيب تنازلي من الأحدث للأقدم عشان الـ Feed يظبط
     .populate("communityId")
     .populate("userId", "username email")
     .populate("pollId")
@@ -50,14 +106,20 @@ const getAllPostsService = async () => {
       }
     });
 
+  // تشغيل الحسابات وحقن الأصوات على كل البوستات بالتوازي
+  const postsWithPolls = await Promise.all(
+    posts.map(post => injectPollResults(post, currentUserId))
+  );
+
   return {
     success: true,
-    results: posts.length,
-    data: posts
+    results: postsWithPolls.length,
+    data: postsWithPolls
   };
 };
 
-const getPostByIdService = async (id) => {
+// ── GET POST BY ID ─────────────────────────────────────────────────────────────
+const getPostByIdService = async (id, currentUserId) => {
   const post = await Post.findById(id)
     .populate("communityId")
     .populate("userId", "username email")
@@ -77,12 +139,15 @@ const getPostByIdService = async (id) => {
     };
   }
 
+  const postWithPoll = await injectPollResults(post, currentUserId);
+
   return {
     success: true,
-    data: post
+    data: postWithPoll
   };
 };
 
+// ── UPDATE POST ────────────────────────────────────────────────────────────────
 const updatePostService = async (id, data, userId) => {
   const post = await Post.findById(id);
 
@@ -108,13 +173,16 @@ const updatePostService = async (id, data, userId) => {
     .populate("userId")
     .populate("pollId");
 
+  const completePost = await injectPollResults(updatedPost, userId);
+
   return {
     success: true,
     message: "Post updated successfully",
-    data: updatedPost
+    data: completePost
   };
 };
 
+// ── DELETE POST ────────────────────────────────────────────────────────────────
 const deletePostService = async (id, userId) => {
   const post = await Post.findById(id);
 
@@ -140,6 +208,7 @@ const deletePostService = async (id, userId) => {
   };
 };
 
+// ── LIKE POST ──────────────────────────────────────────────────────────────────
 const likePostService = async (postId, userId) => {
   const post = await Post.findById(postId);
 
@@ -160,7 +229,6 @@ const likePostService = async (postId, userId) => {
   }
 
   post.likes.push(userId);
-
   await post.save();
 
   return {
@@ -169,6 +237,7 @@ const likePostService = async (postId, userId) => {
   };
 };
 
+// ── UNLIKE POST ────────────────────────────────────────────────────────────────
 const unlikePostService = async (postId, userId) => {
   const post = await Post.findById(postId);
 
@@ -191,11 +260,8 @@ const unlikePostService = async (postId, userId) => {
   };
 };
 
-const addCommentService = async (
-  postId,
-  userId,
-  content
-) => {
+// ── ADD COMMENT ────────────────────────────────────────────────────────────────
+const addCommentService = async (postId, userId, content) => {
   const post = await Post.findById(postId);
 
   if (!post) {
@@ -212,7 +278,6 @@ const addCommentService = async (
   });
 
   post.comments.push(comment._id);
-
   await post.save();
 
   return {

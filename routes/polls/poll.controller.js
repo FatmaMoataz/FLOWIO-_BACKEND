@@ -4,11 +4,14 @@ import { createPollSchema, votePollSchema, idParamSchema } from '../../validatio
 
 // CREATE
 const createPoll = async (req, res, next) => {
-  const { error } = createPollSchema.validate(req.body);
+  // دمج الـ userId بتاع اليوزر اللي عامل login مع الـ body قبل الـ validation
+  const pollData = { ...req.body, userId: req.user._id };
+
+  const { error } = createPollSchema.validate(pollData);
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
   try {
-    const result = await pollService.createPollService(req.body);
+    const result = await pollService.createPollService(pollData);
     res.status(201).json(result);
   } catch (err) {
     next(err);

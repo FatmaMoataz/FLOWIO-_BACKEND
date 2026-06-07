@@ -13,7 +13,7 @@ const createPollSchema = Joi.object({
 
   userId: Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
-    .optional(),
+    .required(),
 
   options: Joi.array().items(
     Joi.object({
