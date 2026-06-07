@@ -36,12 +36,21 @@ const app = express();
 // عمل الـ Server الخارجي اللي هيربط Express مع Socket.io
 const server = http.createServer(app); 
 
+// app.use(cors({
+//   origin: '*',
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' , 'PATCH'],
+//   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
+//   credentials: true
+// }));
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' , 'PATCH'],
+  origin: true, // يسمح تلقائياً بالـ origin المبعوت منه (مثل localhost:5173)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
   credentials: true
 }));
+
+// هامة جداً لـ Vercel لإنهاء طلبات Preflight فوراً بـ 200 قبل الـ Routes
+app.options('*', cors());
 
 // إعداد الـ Socket.io وتمرير الـ Server له
 const io = new Server(server, {
