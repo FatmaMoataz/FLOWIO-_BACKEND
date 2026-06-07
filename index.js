@@ -2,8 +2,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
-import http from 'http'; // 1. استيراد الهيدر بتاع الـ HTTP
-import { Server } from 'socket.io'; // 2. استيراد السوكيت
+import http from 'http'; 
+import { Server } from 'socket.io'; 
 import mongoose from 'mongoose';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -29,36 +29,38 @@ import activityLogRoutes from './routes/activityLogs/activityLog.routes.js';
 import meetingRoutes from './routes/meetings/meeting.routes.js';
 import boardRoutes from './routes/boards/board.routes.js';
 import archiveRoutes from './routes/archive/archive.routes.js';
-import messageRoutes from './routes/messages/message.routes.js'; // 3. استيراد راوت الرسايل الجديد
+import messageRoutes from './routes/messages/message.routes.js'; 
 
 const app = express();
 
 // عمل الـ Server الخارجي اللي هيربط Express مع Socket.io
 const server = http.createServer(app); 
 
-// app.use(cors({
-//   origin: '*',
-//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS' , 'PATCH'],
-//   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
-//   credentials: true
-// }));
+// 1. تفعيل الـ CORS الأساسي
 app.use(cors({
-  origin: true, // يسمح تلقائياً بالـ origin المبعوت منه (مثل localhost:5173)
+  origin: true, 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
   credentials: true
 }));
 
-// هامة جداً لـ Vercel لإنهاء طلبات Preflight فوراً بـ 200 قبل الـ Routes
-app.options('*', cors());
+// 2. هندلة الـ Preflight (OPTIONS) بشكل آمن ميتعراضش مع نظام الـ Routing الجديد
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // إعداد الـ Socket.io وتمرير الـ Server له
 const io = new Server(server, {
   cors: {
-    origin: '*', // تقدري تحددي بورت الفرونت إند هنا لو حابة حماية أكتر
+    origin: '*', 
     methods: ['GET', 'POST']
   }
 });
+
+// ... باقي ملف الـ السيرفر والميدل ويرز والراوتس زي ما هي بالظبط
 
 // JWT key check
 const jwtKey = process.env.JWT_PRIVATE_KEY;
@@ -111,7 +113,7 @@ import './models/meeting.model.js';
 import './models/meetingLog.model.js';
 import './models/refreshToken.model.js';
 import './models/board.model.js';
-import './models/message.model.js'; // 4. استيراد الموديل الجديد هنا
+import './models/message.model.js'; 
 
 // Middlewares
 app.use(express.json());
@@ -151,7 +153,7 @@ app.use('/api/activity',    activityLogRoutes);
 app.use('/api/meetings',    meetingRoutes);
 app.use('/api/boards',      boardRoutes);
 app.use('/api/archive',     archiveRoutes);
-app.use('/api/messages',    messageRoutes); // 5. تشغيل راوت الرسايل
+app.use('/api/messages',    messageRoutes); 
 
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
@@ -162,21 +164,18 @@ if (app.get('env') === 'development') {
 import messageController from './routes/messages/message.controller.js';
 
 io.on('connection', (socket) => {
-    // لما اليوزر يفتح شات روم معينة
     socket.on('join_room', (roomName) => {
         socket.join(roomName);
     });
 
-    // استقبال رسايل الشات في الوقت الفعلي
     socket.on('send_message', async (data) => {
         try {
             const savedMessage = await messageController.handleIncomingMessage({
                 room: data.room,
-                sender: data.sender, // ده الـ User ID
+                sender: data.sender, 
                 text: data.text
             });
 
-            // بث الرسالة كاملة بعد الـ populate لكل اللي في الأوضة
             io.to(data.room).emit('receive_message', savedMessage);
         } catch (err) {
             socket.emit('error_status', { message: err.message });
@@ -186,7 +185,6 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {});
 });
 
-// تشغيل الـ server بدلاً من app
 if (process.env.NODE_ENV !== 'production') {
     const port = process.env.PORT || 4000;
     server.listen(port, () => console.log(`Flowio Server listening on port ${port}...`));
