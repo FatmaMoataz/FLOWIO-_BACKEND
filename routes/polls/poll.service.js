@@ -50,17 +50,32 @@ export const votePollService = async (data = {}) => {
 
 // ── GET RESULTS ────────────────────────────────────────────────────────────────
 export const getPollResultsService = async (pollId) => {
+  const poll = await Poll.findById(pollId);
+  if (!poll) throw new Error("Poll not found");
+
   const votes = await PollVote.find({ pollId });
+  const totalVotes = votes.length;
 
-  const result = {};
+  // تحضير الخيارات وعداداتها
+  const results = {};
+  poll.options.forEach(opt => {
+    results[opt.text] = 0;
+  });
 
+  // حساب الأصوات الحقيقية
   votes.forEach((v) => {
-    result[v.optionText] = (result[v.optionText] || 0) + 1;
+    if (results[v.optionText] !== undefined) {
+      results[v.optionText]++;
+    }
   });
 
   return {
     success: true,
-    data: result,
+    data: {
+      question: poll.question,
+      totalVotes,
+      breakdown: results // هيرجع كائن فيه: { "Option A": 5, "Option B": 2 }
+    },
   };
 };
 

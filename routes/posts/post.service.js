@@ -1,8 +1,32 @@
 import Post from '../../models/post.js';
+import Poll from '../../models/poll.js';
 import Comment from '../../models/comment.js';
 
 const createPostService = async (data) => {
-  const post = await Post.create(data);
+  let createdPollId = null;
+
+  // لو البوست جاي معاه بيانات تصويت، هنكريت الـ Poll الأول 🗳️
+  if (data.pollData && data.pollData.question) {
+    const newPoll = await Poll.create({
+      question: data.pollData.question,
+      options: data.pollData.options, // المصفوفة اللي فيها الـ text
+      userId: data.userId,
+      communityId: data.communityId
+    });
+    createdPollId = newPoll._id;
+  }
+
+  // إنشاء البوست وربطه بالـ Poll لو اتوجدت
+  const postData = {
+    ...data,
+    pollId: createdPollId || data.pollId
+  };
+
+  const post = await Post.create(postData);
+
+  if (createdPollId) {
+    await Poll.findByIdAndUpdate(createdPollId, { postId: post._id });
+  }
 
   await post.populate("communityId userId pollId");
 

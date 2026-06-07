@@ -26,14 +26,22 @@ const getAllPolls = async (req, res, next) => {
 };
 
 // VOTE
+// تعديل الـ vote داخل poll.controller.js
 const votePoll = async (req, res, next) => {
-  const { error } = votePollSchema.validate(req.body);
+  // دمج الـ userId اللي جاي من الـ Token المحمي مع الـ body
+  const voteData = { ...req.body, userId: req.user._id };
+
+  const { error } = votePollSchema.validate(voteData);
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
   try {
-    const result = await pollService.votePollService(req.body);
+    const result = await pollService.votePollService(voteData);
     res.status(201).json(result);
   } catch (err) {
+    // معالجة خطأ التصويت المتكرر بسبب الـ Unique Index اللي إنتِ عاملاه 🛑
+    if (err.code === 11000) {
+      return res.status(400).json({ success: false, message: "You have already voted in this poll!" });
+    }
     next(err);
   }
 };
