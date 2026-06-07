@@ -15,11 +15,13 @@ const createPost = async (req, res, next) => {
 
 const getAllPosts = async (req, res, next) => {
   try {
-    const result = await postService.getAllPostsService();
-
-    return res.status(200).json(result);
-  } catch (error) {
-    next(error);
+    // سحب الـ ID بأمان لو الـ auth middleware حاطه في الـ req
+    const currentUserId = req.user?._id || null; 
+    
+    const result = await postService.getAllPostsService(currentUserId);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err); // تمرير الخطأ للـ global error handler بدل ما يوقع السيرفر
   }
 };
 

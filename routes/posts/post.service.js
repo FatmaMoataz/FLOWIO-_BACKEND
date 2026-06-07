@@ -6,7 +6,11 @@ import mongoose from 'mongoose'; // 👈 ضفنا الـ import ده عشان ن
 // ── دالة مساعدة لحساب وحقن تفاصيل الـ Poll جوه البوست 🗳️ ──
 const injectPollResults = async (post, currentUserId) => {
   if (!post.pollId) return post;
-
+  let userVote = null;
+  if (currentUserId) {
+  const foundVote = votes.find(v => v.userId && v.userId.toString() === currentUserId.toString());
+  userVote = foundVote ? poll.options.findIndex(opt => opt.text === foundVote.optionText) : null;
+}
   // تحويل الـ post لـ plain object عشان نقدر نعدل عليه بحرية ونضيف حقول جديدة
   const postObj = post.toObject ? post.toObject({ virtuals: true }) : post;
   const poll = postObj.pollId;
