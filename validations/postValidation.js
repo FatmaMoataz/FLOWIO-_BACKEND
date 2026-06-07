@@ -11,7 +11,17 @@ const createPostSchema = Joi.object({
 
   pollId: Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
-    .optional()
+    .optional(),
+
+  // 👈 زودي ده هنا عشان الـ Joi يعدي الـ request بسلام
+  pollData: Joi.object({
+    question: Joi.string().min(1).required(),
+    options: Joi.array().items(
+      Joi.object({
+        text: Joi.string().min(1).required()
+      })
+    ).min(2).required()
+  }).optional() 
 });
 
 const updatePostSchema = Joi.object({
