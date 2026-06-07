@@ -1,11 +1,17 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import Joi from 'joi';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 
+// Imports للموديلات - تم إضافة موديل الشركة بنجاح 🌟
 import { User, validateForgotPassword, validatePasswordReset } from '../models/user.js';
+import { Company } from '../models/company.js'; 
 import { RefreshToken } from '../models/refreshToken.model.js';
+
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -23,21 +29,36 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASSWORD
   }
 });
-// تحديث الـ Validation helper ليتوافق مع المبعوث من الـ UI (مستوحى من السكرين شوت)
+
+const subscriptionPlanEnum = {
+  free: 'free',
+  basic: 'basic',
+  premium: 'premium'
+};
+
+// الـ Validation المعتمد والمتوافق مع الفرونت إند
 function validateSignup(data) {
   const schema = Joi.object({
     name: Joi.string().min(3).max(50).required(),
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required(),
-    company: Joi.string().min(2).max(50).required(), // استقبلنا الـ Dropdown اللي في الفرونت هنا كـ String
+    company: Joi.string().min(2).max(50).required(), 
     role: Joi.string().valid('system-admin', 'project-manager', 'founder', 'team-member').optional(),
     specialization: Joi.string().valid('developer', 'designer', 'qa', 'none', 'Employee').optional()
   });
   return schema.validate(data);
 }
 
+function validateLogin(data) {
+  const schema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().required()
+  });
+  return schema.validate(data);
+}
+
 // ========================================
-// 0️⃣  POST /api/auth/signup (تم التحديث للربط الديناميكي مع الـ Company)
+// 1️⃣  POST /api/auth/signup (تم دمج وإنشاء الشركة تلقائياً)
 // ========================================
 router.post('/signup', async (req, res) => {
   const { error } = validateSignup(req.body);
@@ -54,7 +75,7 @@ router.post('/signup', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 3. إنشاء الـ User أولاً (مبدئياً بدون companyId عشان هحتاج الـ userId بتاعه)
+    // 3. إنشاء الـ User
     user = new User({
       name,
       email: email.toLowerCase(),
@@ -65,16 +86,15 @@ router.post('/signup', async (req, res) => {
 
     await user.save();
 
-    // 4. إنشاء الـ Company تلقائياً وربطها بالـ User اللي لسه متباصي
-    // اسم الشركة هيكون مثلاً "Name's Hub" ومجالها هو الـ Dropdown المبعوث (Startup/Agency/Enterprise)
+    // 4. إنشاء الـ Company تلقائياً بناءً على الـ Dropdown المبعوث
     const newCompany = await Company.create({
       name: `${name}'s Workplace`,
-      industry: company, // الـ Dropdown جاي هنا (مثلا Startup)
-      subscriptionPlan: 'free',
-      userId: user._id // ربط الشركة بالـ Admin بتاعها
+      industry: company, 
+      subscriptionPlan: subscriptionPlanEnum.free,
+      userId: user._id 
     });
 
-    // 5. تحديث الـ User بـ الـ companyId الحقيقي اللي لسه مخلوق حالا
+    // 5. ربط الشركة بالـ User وحفظ التعديل
     user.companyId = newCompany._id;
     await user.save();
 
@@ -103,77 +123,7 @@ router.post('/signup', async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
-          companyId: user.companyId, // راجع هنا كـ ObjectId سليم 100% للفرونت إند
-          specialization: user.specialization
-        }
-      }
-    });
-  } catch (err) {
-    console.error('[POST /auth/signup]', err);
-    return res.status(500).json({ success: false, message: 'Error: ' + err.message });
-  }
-});
-
-function validateLogin(data) {
-  const schema = Joi.object({
-    email: Joi.string().email().required(),
-    password: Joi.string().required()
-  });
-  return schema.validate(data);
-}
-
-// ========================================
-// 0️⃣  POST /api/auth/signup
-// ========================================
-router.post('/signup', async (req, res) => {
-  const { error } = validateSignup(req.body);
-  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
-
-  try {
-    const { name, email, password, companyId, role, specialization } = req.body;
-
-    let user = await User.findOne({ email: email.toLowerCase() });
-    if (user) return res.status(400).json({ success: false, message: 'User already exists with this email.' });
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    user = new User({
-      name,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      companyId: companyId || null,
-      role: role || 'team-member',
-      specialization: specialization || 'none'
-    });
-
-    await user.save();
-
-    const accessToken = generateAccessToken(user);
-    const rawRefreshToken = generateRefreshToken();
-    const hashedRefreshToken = hashToken(rawRefreshToken);
-
-    await RefreshToken.create({
-      userId: user._id,
-      token: hashedRefreshToken,
-      expiresAt: getRefreshTokenExpiry(),
-      userAgent: req.headers['user-agent'] || '',
-      ipAddress: req.ip || ''
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: 'Account created successfully!',
-      token: accessToken,  // للتوافق مع الخدمات القديمة بالفرونت
-      data: {
-        accessToken,
-        refreshToken: rawRefreshToken,
-        user: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          companyId: user.companyId,
+          companyId: user.companyId, 
           specialization: user.specialization
         }
       }
@@ -185,7 +135,7 @@ router.post('/signup', async (req, res) => {
 });
 
 // ========================================
-// 1️⃣  POST /api/auth/login
+// 2️⃣  POST /api/auth/login
 // ========================================
 router.post('/login', async (req, res) => {
   const { error } = validateLogin(req.body);
@@ -235,7 +185,7 @@ router.post('/login', async (req, res) => {
 });
 
 // ========================================
-// 2️⃣  POST /api/auth/refresh
+// 3️⃣  POST /api/auth/refresh
 // ========================================
 router.post('/refresh', async (req, res) => {
   const { refreshToken } = req.body;
@@ -283,7 +233,7 @@ router.post('/refresh', async (req, res) => {
 });
 
 // ========================================
-// 3️⃣  POST /api/auth/logout
+// 4️⃣  POST /api/auth/logout
 // ========================================
 router.post('/logout', async (req, res) => {
   const { refreshToken } = req.body;
@@ -300,7 +250,7 @@ router.post('/logout', async (req, res) => {
 });
 
 // ========================================
-// 4️⃣  POST /api/auth/logout-all
+// 5️⃣  POST /api/auth/logout-all
 // ========================================
 router.post('/logout-all', auth, async (req, res) => {
   try {
@@ -316,7 +266,7 @@ router.post('/logout-all', auth, async (req, res) => {
 });
 
 // ========================================
-// 5️⃣  POST /api/auth/forgot-password
+// 6️⃣  POST /api/auth/forgot-password
 // ========================================
 router.post('/forgot-password', async (req, res) => {
   try {
@@ -353,7 +303,7 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // ========================================
-// 6️⃣  POST /api/auth/reset-password
+// 7️⃣  POST /api/auth/reset-password
 // ========================================
 router.post('/reset-password', async (req, res) => {
   try {
@@ -411,7 +361,7 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // ========================================
-// 7️⃣  POST /api/auth/google
+// 8️⃣  POST /api/auth/google (محدث لإنشاء شركة تلقائياً للمستخدمين الجدد)
 // ========================================
 router.post('/google', async (req, res) => {
   try {
@@ -421,13 +371,25 @@ router.post('/google', async (req, res) => {
     let user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
+      const defaultName = email.split('@')[0];
       user = new User({
-        name: email.split('@')[0],  
+        name: defaultName,  
         email: email.toLowerCase(),
-        password: undefined, // تُترك فارغة لأن المعرف قادم من طرف خارجي
+        password: undefined, 
         specialization: 'Employee',
         role: 'team-member'
       });
+      await user.save();
+
+      // إنشاء شركة افتراضية للمسجل عن طريق جوجل كي لا يواجه مشاكل بالـ Dashboard
+      const googleCompany = await Company.create({
+        name: `${defaultName}'s Workplace`,
+        industry: 'Startup',
+        subscriptionPlan: subscriptionPlanEnum.free,
+        userId: user._id
+      });
+
+      user.companyId = googleCompany._id;
       await user.save();
     }
 
@@ -455,6 +417,7 @@ router.post('/google', async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          companyId: user.companyId,
           specialization: user.specialization
         }
       }
