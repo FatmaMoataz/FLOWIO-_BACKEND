@@ -7,7 +7,7 @@ const createPostSchema = Joi.object({
 
   communityId: Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
-    .required(),
+    .optional(),
 
   pollId: Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)
