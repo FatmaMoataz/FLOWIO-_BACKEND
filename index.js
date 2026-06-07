@@ -38,7 +38,7 @@ const server = http.createServer(app);
 
 // 1. تفعيل الـ CORS الأساسي
 app.use(cors({
-  origin: true, 
+  origin: '*', // في الإنتاج، غيرها إلى قائمة الدومينات المسموح بها
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
   credentials: true
