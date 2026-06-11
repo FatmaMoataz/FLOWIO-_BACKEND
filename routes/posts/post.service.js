@@ -1,188 +1,185 @@
+// post.service.js — complete rewrite
+
 import Post from '../../models/post.js';
 import Poll from '../../models/poll.js';
 import Comment from '../../models/comment.js';
-import mongoose from 'mongoose'; // 👈 ضفنا الـ import ده عشان نستخدم الموديلات التانية ديناميكياً
+import PollVote from '../../models/pollVote.js';
 
-// ── دالة مساعدة لحساب وحقن تفاصيل الـ Poll جوه البوست 🗳️ ──
-const injectPollResults = async (post, currentUserId) => {
-  if (!post.pollId) return post;
+// ── Avatar helper ──────────────────────────────────────────────────────────────
+// User schema has no avatar field, so we generate one from the name.
+// UI Avatars is free, needs no API key, and returns a consistent image per name.
+const getAvatarUrl = (user) => {
+  if (!user) return 'https://ui-avatars.com/api/?name=User&background=5089D6&color=fff';
+  const name = encodeURIComponent(user.name || user.username || 'User');
+  return `https://ui-avatars.com/api/?name=${name}&background=5089D6&color=fff&bold=true`;
+};
+
+// ── Poll results injector ──────────────────────────────────────────────────────
+// Reads votes from Poll.options[].votes[] (array of userIds already in schema).
+// PollVote collection is NOT used here — only used by votePollService for
+// duplicate enforcement via the unique index.
+const injectPollResults = (post, currentUserId) => {
+  // Works on plain objects (after .lean() or .toObject())
+  if (!post.pollId || typeof post.pollId !== 'object') return post;
+
+  const poll = post.pollId;
+  if (!poll.options || !Array.isArray(poll.options)) return post;
+
+  const totalVotes = poll.options.reduce(
+    (sum, opt) => sum + (opt.votes?.length || 0),
+    0
+  );
+
+  // Find which option the current user voted on (returns index or null)
   let userVote = null;
   if (currentUserId) {
-  const foundVote = votes.find(v => v.userId && v.userId.toString() === currentUserId.toString());
-  userVote = foundVote ? poll.options.findIndex(opt => opt.text === foundVote.optionText) : null;
-}
-  // تحويل الـ post لـ plain object عشان نقدر نعدل عليه بحرية ونضيف حقول جديدة
-  const postObj = post.toObject ? post.toObject({ virtuals: true }) : post;
-  const poll = postObj.pollId;
-
-  if (poll && poll.options) {
-    try {
-      // 1. جلب كل الأصوات للـ Poll ده من جدول الـ PollVote
-      const votes = await mongoose.model("PollVote").find({ pollId: poll._id });
-      
-      // 2. حساب الـ Breakdown لخيارات التصويت (هيبدأ بـ صفر لكل اختيار)
-      const breakdown = {};
-      poll.options.forEach(opt => {
-        breakdown[opt.text] = 0;
-      });
-
-      // زياوة عداد الأصوات الحقيقية
-      votes.forEach(v => {
-        if (breakdown[v.optionText] !== undefined) {
-          breakdown[v.optionText]++;
-        }
-      });
-
-      // 3. معرفة إذا كان المستخدم الحالي صوّت وعلى أنهي خيار بالظبط
-      let userVote = null;
-      if (currentUserId) {
-        const foundVote = votes.find(v => v.userId.toString() === currentUserId.toString());
-        // لو صوّت، هنجيب الـ index (المكان) بتاع الاختيار ده في المصفوفة عشان الـ UI ينور عنده
-        userVote = foundVote ? poll.options.findIndex(opt => opt.text === foundVote.optionText) : null;
-      }
-
-      // دمج البيانات الجديدة جوه الـ poll object عشان الفرونت إند يقرأها علطول 🎉
-      postObj.pollId.breakdown = breakdown;
-      postObj.pollId.totalVotes = votes.length;
-      postObj.pollId.userVote = userVote; // هيرجع الـ index بتاعه (0, 1, 2...) أو null لو مّصوتش
-    } catch (err) {
-      console.error("Error embedding poll results to post:", err);
-    }
+    const uid = currentUserId.toString();
+    userVote = poll.options.findIndex(
+      (opt) => opt.votes?.some((v) => v.toString() === uid)
+    );
+    if (userVote === -1) userVote = null;
   }
 
-  return postObj;
+  // Attach computed fields directly onto poll options
+  poll.options = poll.options.map((opt, idx) => ({
+    ...opt,
+    voteCount: opt.votes?.length || 0,
+    percentage: totalVotes > 0
+      ? Math.round(((opt.votes?.length || 0) / totalVotes) * 100)
+      : 0,
+    votedByMe: idx === userVote,
+  }));
+
+  poll.totalVotes = totalVotes;
+  poll.userVote = userVote;
+
+  return post;
 };
+
+// ── Shared populate helper ─────────────────────────────────────────────────────
+// Centralised so every service uses the exact same shape.
+const populatePost = (query) =>
+  query
+    .populate('userId', 'name email role specialization')
+    .populate({
+      path: 'pollId',
+      select: 'question options totalVotes',
+    })
+    .populate({
+      path: 'comments',
+      populate: {
+        path: 'userId',
+        select: 'name email role',
+      },
+    })
+    .lean(); // lean() = plain JS objects, safe to mutate in injectPollResults
+
+// ── After lean(), userId has no avatar — attach it here ───────────────────────
+const attachAvatars = (posts) =>
+  posts.map((post) => {
+    if (post.userId && typeof post.userId === 'object') {
+      post.userId.avatar = getAvatarUrl(post.userId);
+    }
+    if (Array.isArray(post.comments)) {
+      post.comments = post.comments.map((c) => {
+        if (c.userId && typeof c.userId === 'object') {
+          c.userId.avatar = getAvatarUrl(c.userId);
+        }
+        return c;
+      });
+    }
+    return post;
+  });
 
 // ── CREATE POST ────────────────────────────────────────────────────────────────
 const createPostService = async (data) => {
-  let createdPollId = null;
+  const { content, userId, pollData, communityId, is_pinned } = data;
 
-  // 1️⃣ لو البوست جاي معاه بيانات تصويت، هنكريت الـ Poll الأول 🗳️
-  if (data.pollData && data.pollData.question) {
+  let pollId = null;
+
+  if (pollData?.question && Array.isArray(pollData.options) && pollData.options.length >= 2) {
     const newPoll = await Poll.create({
-      question: data.pollData.question,
-      options: data.pollData.options, // المصفوفة اللي فيها الـ text
-      userId: data.userId,
-      communityId: data.communityId
+      question: pollData.question,
+      options: pollData.options.map((o) => ({ text: o.text, votes: [] })),
+      userId,
+      communityId: communityId || null,
     });
-    createdPollId = newPoll._id;
+    pollId = newPoll._id;
   }
 
-  // 2️⃣ تفكيك الداتا عشان نستبعد الـ pollData تماماً ونحمي المونجوز Schema 🛡️
-  const { pollData, ...cleanData } = data;
+  const post = await Post.create({
+    content,
+    userId,
+    communityId: communityId || null,
+    is_pinned: is_pinned || false,
+    pollId,
+  });
 
-  // إنشاء البوست وربطه بالـ Poll لو اتوجدت
-  const postData = {
-    ...cleanData,
-    pollId: createdPollId || data.pollId
-  };
-
-  const post = await Post.create(postData);
-
-  if (createdPollId) {
-    await Poll.findByIdAndUpdate(createdPollId, { postId: post._id });
+  // Link the poll back to the post (useful for standalone poll queries)
+  if (pollId) {
+    await Poll.findByIdAndUpdate(pollId, { postId: post._id });
   }
 
-  await post.populate("communityId userId pollId");
-
-  // حقن تفاصيل الـ poll النظيف للبوست اللي راجع فوراً
-  const completePost = await injectPollResults(post, data.userId);
+  // Return fully populated post
+  const populated = await populatePost(Post.findById(post._id));
+  const [withAvatars] = attachAvatars([populated]);
+  const withPoll = injectPollResults(withAvatars, userId);
 
   return {
     success: true,
-    message: "Post created successfully",
-    data: completePost
+    message: 'Post created successfully',
+    data: withPoll,
   };
 };
 
 // ── GET ALL POSTS ──────────────────────────────────────────────────────────────
 const getAllPostsService = async (currentUserId) => {
-  const posts = await Post.find()
-    .sort({ createdAt: -1 }) // ترتيب تنازلي من الأحدث للأقدم عشان الـ Feed يظبط
-    .populate("communityId")
-    .populate("userId", "username email")
-    .populate("pollId")
-    .populate({
-      path: "comments",
-      populate: {
-        path: "userId",
-        select: "username email"
-      }
-    });
+  const posts = await populatePost(Post.find().sort({ createdAt: -1 }));
 
-  // تشغيل الحسابات وحقن الأصوات على كل البوستات بالتوازي
-  const postsWithPolls = await Promise.all(
-    posts.map(post => injectPollResults(post, currentUserId))
-  );
+  const withAvatars = attachAvatars(posts);
+  const withPolls = withAvatars.map((p) => injectPollResults(p, currentUserId));
 
   return {
     success: true,
-    results: postsWithPolls.length,
-    data: postsWithPolls
+    results: withPolls.length,
+    data: withPolls,
   };
 };
 
 // ── GET POST BY ID ─────────────────────────────────────────────────────────────
 const getPostByIdService = async (id, currentUserId) => {
-  const post = await Post.findById(id)
-    .populate("communityId")
-    .populate("userId", "username email")
-    .populate("pollId")
-    .populate({
-      path: "comments",
-      populate: {
-        path: "userId",
-        select: "username email"
-      }
-    });
+  const post = await populatePost(Post.findById(id));
 
   if (!post) {
-    return {
-      success: false,
-      message: "Post not found"
-    };
+    return { success: false, message: 'Post not found' };
   }
 
-  const postWithPoll = await injectPollResults(post, currentUserId);
+  const [withAvatars] = attachAvatars([post]);
+  const withPoll = injectPollResults(withAvatars, currentUserId);
 
-  return {
-    success: true,
-    data: postWithPoll
-  };
+  return { success: true, data: withPoll };
 };
 
 // ── UPDATE POST ────────────────────────────────────────────────────────────────
 const updatePostService = async (id, data, userId) => {
   const post = await Post.findById(id);
 
-  if (!post) {
-    return {
-      success: false,
-      message: "Post not found"
-    };
-  }
-
+  if (!post) return { success: false, message: 'Post not found' };
   if (post.userId.toString() !== userId.toString()) {
-    return {
-      success: false,
-      message: "Unauthorized"
-    };
+    return { success: false, message: 'Unauthorized' };
   }
 
-  const updatedPost = await Post.findByIdAndUpdate(id, data, {
-    new: true,
-    runValidators: true
-  })
-    .populate("communityId")
-    .populate("userId")
-    .populate("pollId");
+  const updatedPost = await populatePost(
+    Post.findByIdAndUpdate(id, data, { new: true, runValidators: true })
+  );
 
-  const completePost = await injectPollResults(updatedPost, userId);
+  const [withAvatars] = attachAvatars([updatedPost]);
+  const withPoll = injectPollResults(withAvatars, userId);
 
   return {
     success: true,
-    message: "Post updated successfully",
-    data: completePost
+    message: 'Post updated successfully',
+    data: withPoll,
   };
 };
 
@@ -190,104 +187,70 @@ const updatePostService = async (id, data, userId) => {
 const deletePostService = async (id, userId) => {
   const post = await Post.findById(id);
 
-  if (!post) {
-    return {
-      success: false,
-      message: "Post not found"
-    };
-  }
-
+  if (!post) return { success: false, message: 'Post not found' };
   if (post.userId.toString() !== userId.toString()) {
-    return {
-      success: false,
-      message: "Unauthorized"
-    };
+    return { success: false, message: 'Unauthorized' };
   }
 
+  // Clean up linked poll and all comments
+  if (post.pollId) {
+    await Poll.findByIdAndDelete(post.pollId);
+    await PollVote.deleteMany({ pollId: post.pollId });
+  }
+  await Comment.deleteMany({ postId: id });
   await Post.findByIdAndDelete(id);
 
-  return {
-    success: true,
-    message: "Post deleted successfully"
-  };
+  return { success: true, message: 'Post deleted successfully' };
 };
 
-// ── LIKE POST ──────────────────────────────────────────────────────────────────
+// ── LIKE / UNLIKE POST ─────────────────────────────────────────────────────────
 const likePostService = async (postId, userId) => {
   const post = await Post.findById(postId);
+  if (!post) return { success: false, message: 'Post not found' };
 
-  if (!post) {
-    return {
-      success: false,
-      message: "Post not found"
-    };
-  }
-
-  const alreadyLiked = post.likes.includes(userId);
-
-  if (alreadyLiked) {
-    return {
-      success: false,
-      message: "Post already liked"
-    };
+  if (post.likes.map(String).includes(userId.toString())) {
+    return { success: false, message: 'Post already liked' };
   }
 
   post.likes.push(userId);
   await post.save();
 
-  return {
-    success: true,
-    message: "Post liked successfully"
-  };
+  return { success: true, message: 'Post liked successfully', data: { likes: post.likes } };
 };
 
-// ── UNLIKE POST ────────────────────────────────────────────────────────────────
 const unlikePostService = async (postId, userId) => {
   const post = await Post.findById(postId);
+  if (!post) return { success: false, message: 'Post not found' };
 
-  if (!post) {
-    return {
-      success: false,
-      message: "Post not found"
-    };
-  }
-
-  post.likes = post.likes.filter(
-    (id) => id.toString() !== userId.toString()
-  );
-
+  post.likes = post.likes.filter((id) => id.toString() !== userId.toString());
   await post.save();
 
-  return {
-    success: true,
-    message: "Post unliked successfully"
-  };
+  return { success: true, message: 'Post unliked successfully', data: { likes: post.likes } };
 };
 
 // ── ADD COMMENT ────────────────────────────────────────────────────────────────
 const addCommentService = async (postId, userId, content) => {
   const post = await Post.findById(postId);
+  if (!post) return { success: false, message: 'Post not found' };
 
-  if (!post) {
-    return {
-      success: false,
-      message: "Post not found"
-    };
-  }
-
-  const comment = await Comment.create({
-    content,
-    userId,
-    postId
-  });
+  const comment = await Comment.create({ content, userId, postId });
 
   post.comments.push(comment._id);
   await post.save();
 
+  // Populate the comment's user for immediate frontend use
+  await comment.populate('userId', 'name email role');
+
+  // Attach avatar since User has no avatar field
+  const commentObj = comment.toObject();
+  if (commentObj.userId && typeof commentObj.userId === 'object') {
+    commentObj.userId.avatar = getAvatarUrl(commentObj.userId);
+  }
+
   return {
     success: true,
-    message: "Comment added successfully",
-    data: comment
+    message: 'Comment added successfully',
+    data: commentObj,
   };
 };
 
@@ -299,5 +262,5 @@ export default {
   deletePostService,
   likePostService,
   unlikePostService,
-  addCommentService
+  addCommentService,
 };

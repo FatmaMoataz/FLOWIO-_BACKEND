@@ -54,6 +54,7 @@ router.delete(
 
 router.post(
   "/:id/comment",
+  auth,
   validate(idParamSchema, "params"),
   validate(commentSchema),
   postController.addComment
