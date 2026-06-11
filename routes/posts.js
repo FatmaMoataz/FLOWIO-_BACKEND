@@ -2,7 +2,7 @@ import express from 'express';
 import * as postController from './posts/post.controller.js';
 import { validate } from '../middleware/validation.middleware.js';
 import { createPostSchema, updatePostSchema, idParamSchema, commentSchema } from '../validations/postValidation.js';
-import auth from '../middleware/auth.middleware.js';
+import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -41,6 +41,7 @@ router.delete(
 
 router.post(
   "/:id/like",
+  auth,
   validate(idParamSchema, "params"),
   postController.likePost
 );
