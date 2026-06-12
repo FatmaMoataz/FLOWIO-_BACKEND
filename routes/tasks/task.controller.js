@@ -1,24 +1,29 @@
-import Joi from 'joi';
-// إضافة امتداد .js لملف الخدمة والموديل إجباري
 import taskService from './task.service.js';
 import { validateTask, validateTaskUpdate } from '../../models/task.model.js';
 
-// ── Helper ─────────────────────────────────────────────────────────────────────
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
-// ── Create Task ────────────────────────────────────────────────────────────────
+// ── Create Task (project-scoped OR personal) ───────────────────────────────────
 export const createTask = async (req, res) => {
-    const { projectId } = req.params;
-    if (!isValidObjectId(projectId)) {
+    const projectId = req.params.projectId ?? null;
+
+    // If a projectId was supplied in the URL, validate it
+    if (projectId && !isValidObjectId(projectId)) {
         return res.status(400).json({ success: false, message: 'Invalid projectId in URL.' });
     }
+
     const { error } = validateTask(req.body);
     if (error) {
         const messages = error.details.map(d => d.message);
         return res.status(400).json({ success: false, errors: messages });
     }
+
     try {
-        const task = await taskService.createTaskService({ ...req.body, projectId });
+        const task = await taskService.createTaskService({
+            ...req.body,
+            projectId,                      // null for personal tasks
+            assignedTo: req.user._id        // auto-assign to the logged-in user
+        });
         return res.status(201).json({ success: true, data: task });
     } catch (err) {
         console.error('[createTask]', err);
@@ -26,7 +31,7 @@ export const createTask = async (req, res) => {
     }
 };
 
-// ── Get All Tasks for a Project (with optional filters) ────────────────────────
+// ── Get All Tasks for a Project ────────────────────────────────────────────────
 export const getAllTasksByProject = async (req, res) => {
     const { projectId } = req.params;
     if (!isValidObjectId(projectId)) {
@@ -34,7 +39,7 @@ export const getAllTasksByProject = async (req, res) => {
     }
     const filters = {};
     const { status, assignedTo, priority } = req.query;
-    if (status)   filters.status    = status;
+    if (status)   filters.status   = status;
     if (priority) filters.priority = priority;
     if (assignedTo) {
         if (!isValidObjectId(assignedTo)) {
@@ -51,10 +56,13 @@ export const getAllTasksByProject = async (req, res) => {
     }
 };
 
-// ── Get My Tasks ───────────────────────────────────────────────────────────────
+// ── Get My Tasks (personal — projectId is null) ────────────────────────────────
 export const getMyTasks = async (req, res) => {
-    const filters = { assignedTo: req.user._id };
-    if (req.query.status)   filters.status    = req.query.status;
+    const filters = {
+        assignedTo: req.user._id,
+        projectId: null             // ← only personal tasks
+    };
+    if (req.query.status)   filters.status   = req.query.status;
     if (req.query.priority) filters.priority = req.query.priority;
     try {
         const tasks = await taskService.getTasksByFilterService(filters);
@@ -106,10 +114,7 @@ export const assignTask = async (req, res) => {
         }
     }
     try {
-        const task = await taskService.updateTaskService(
-            req.params.id,
-            { assignedTo: assignedTo || null }
-        );
+        const task = await taskService.updateTaskService(req.params.id, { assignedTo: assignedTo || null });
         if (!task) return res.status(404).json({ success: false, message: 'Task not found.' });
         const message = assignedTo ? 'Task assigned successfully.' : 'Task unassigned successfully.';
         return res.status(200).json({ success: true, message, data: task });
@@ -122,20 +127,14 @@ export const assignTask = async (req, res) => {
 // ── Link Task to Epic ──────────────────────────────────────────────────────────
 export const linkTaskToEpic = async (req, res) => {
     const { epicId } = req.body;
-
     if (epicId !== null && epicId !== undefined) {
         if (!isValidObjectId(String(epicId))) {
             return res.status(400).json({ success: false, message: 'Invalid epicId.' });
         }
     }
-
     try {
-        const task = await taskService.updateTaskService(
-            req.params.id,
-            { epicId: epicId || null }
-        );
+        const task = await taskService.updateTaskService(req.params.id, { epicId: epicId || null });
         if (!task) return res.status(404).json({ success: false, message: 'Task not found.' });
-
         const message = epicId ? 'Task linked to epic.' : 'Task removed from epic.';
         return res.status(200).json({ success: true, message, data: task });
     } catch (err) {
