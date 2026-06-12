@@ -49,7 +49,12 @@ const userSchema = new mongoose.Schema(
     passwordResetExpires: {
       type: Date,
       default: null
-    }
+    },
+   avatar: {
+  type: String,
+  default: null,
+  trim: true,
+},
   },
   {
     timestamps: true 

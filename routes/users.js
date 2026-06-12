@@ -53,7 +53,7 @@ router.put('/me', auth, async (req, res) => {
     }
 
     try {
-        const allowedFields = _.pick(req.body, ['name', 'specialization', 'companyId']);
+        const allowedFields = _.pick(req.body, ['name', 'specialization', 'companyId', 'avatar']);
 
         const user = await User.findByIdAndUpdate(
             req.user._id,
@@ -164,7 +164,8 @@ function validateProfileUpdate(data) {
         specialization: Joi.string()
             .valid('developer', 'designer', 'qa', 'none')
             .optional(),
-        companyId: Joi.string().hex().length(24).optional().allow(null)
+        companyId: Joi.string().hex().length(24).optional().allow(null),
+        avatar: Joi.string().uri().optional().allow(null, ''),
     });
     return schema.validate(data);
 }
@@ -183,5 +184,7 @@ function validatePasswordChange(data) {
     });
     return schema.validate(data);
 }
+
+
 
 export default router;
