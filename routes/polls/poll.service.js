@@ -28,6 +28,26 @@ export const getAllPollsService = async () => {
 };
 
 // ── VOTE ───────────────────────────────────────────────────────────────────────
+// export const votePollService = async (data = {}) => {
+//   if (!data || typeof data !== "object") {
+//     throw new Error("Vote payload is missing or invalid");
+//   }
+
+//   const { pollId, optionText, userId } = data;
+
+//   const vote = await PollVote.create({
+//     pollId,
+//     optionText,
+//     userId,
+//   });
+
+//   return {
+//     success: true,
+//     message: "Vote added successfully",
+//     data: vote,
+//   };
+// };
+// ── VOTE ───────────────────────────────────────────────────────────────────────
 export const votePollService = async (data = {}) => {
   if (!data || typeof data !== "object") {
     throw new Error("Vote payload is missing or invalid");
@@ -35,16 +55,56 @@ export const votePollService = async (data = {}) => {
 
   const { pollId, optionText, userId } = data;
 
+  // Check if user already voted
+  const existingVote = await PollVote.findOne({ pollId, userId });
+  if (existingVote) {
+    throw new Error("You have already voted in this poll!");
+  }
+
+  // Create the vote
   const vote = await PollVote.create({
     pollId,
     optionText,
     userId,
   });
 
+  // Get the poll with populated vote counts
+  const poll = await Poll.findById(pollId);
+  if (!poll) throw new Error("Poll not found");
+
+  // Get all votes for this poll
+  const allVotes = await PollVote.find({ pollId });
+  const totalVotes = allVotes.length;
+
+  // Calculate vote counts for each option
+  const optionsWithCounts = poll.options.map(option => {
+    const voteCount = allVotes.filter(v => v.optionText === option.text).length;
+    const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+    const votedByMe = option.text === optionText; // Current user voted for this option
+    
+    return {
+      _id: option._id,
+      text: option.text,
+      voteCount: voteCount,
+      votes: allVotes.filter(v => v.optionText === option.text).map(v => v.userId),
+      percentage: percentage,
+      votedByMe: votedByMe
+    };
+  });
+
+  // Return the complete updated poll
+  const updatedPoll = {
+    _id: poll._id,
+    question: poll.question,
+    options: optionsWithCounts,
+    totalVotes: totalVotes,
+    createdAt: poll.createdAt
+  };
+
   return {
     success: true,
     message: "Vote added successfully",
-    data: vote,
+    data: updatedPoll // ✅ Return the poll with updated counts
   };
 };
 
