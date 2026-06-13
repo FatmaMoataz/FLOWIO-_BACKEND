@@ -1,6 +1,7 @@
 import pollService from "./poll.service.js";
 import Notification from '../../models/notification.js';
-import Poll from '../../models/poll.js'; // adjust path if needed
+import Poll from '../../models/poll.js'; 
+import {User} from '../../models/user.js';
 import { createPollSchema, votePollSchema, idParamSchema } from "../../validations/pollValidation.js";
 
 const createPoll = async (req, res, next) => {
@@ -12,16 +13,17 @@ const createPoll = async (req, res, next) => {
   try {
     const result = await pollService.createPollService(pollData);
 
-    // Notify all targetted users about the new poll
     const notifyUserIds = req.body.notifyUserIds || [];
     if (notifyUserIds.length > 0) {
+      const fromUser = await User.findById(req.user._id).select('name'); // ← fetch name
+
       await Promise.all(
         notifyUserIds
           .filter(id => String(id) !== String(req.user._id))
           .map(userId =>
             Notification.create({
               title: "New Poll",
-              message: `${req.user.name} created a poll: "${pollData.question?.slice(0, 60)}"`,
+              message: `${fromUser.name} created a poll: "${pollData.question?.slice(0, 60)}"`,
               type: "POLLS",
               userId,
               fromUserId: req.user._id,
@@ -51,12 +53,15 @@ const votePoll = async (req, res, next) => {
   try {
     const result = await pollService.votePollService(voteData);
 
-    // Notify poll creator about the vote
-    const poll = await Poll.findById(req.body.pollId).select('userId question');
+    const [poll, fromUser] = await Promise.all([  // ← fetch both together
+      Poll.findById(req.body.pollId).select('userId question'),
+      User.findById(req.user._id).select('name'),
+    ]);
+
     if (poll && String(poll.userId) !== String(req.user._id)) {
       await Notification.create({
         title: "New Vote",
-        message: `${req.user.name} voted on your poll: "${poll.question?.slice(0, 60)}"`,
+        message: `${fromUser.name} voted on your poll: "${poll.question?.slice(0, 60)}"`,
         type: "POLLS",
         userId: poll.userId,
         fromUserId: req.user._id,

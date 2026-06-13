@@ -1,5 +1,6 @@
 import taskService from './task.service.js';
 import Notification from '../../models/notification.js';
+import {User} from '../../models/user.js';
 import { validateTask, validateTaskUpdate } from '../../models/task.model.js';
 
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
@@ -23,11 +24,12 @@ export const createTask = async (req, res) => {
             assignedTo: req.user._id
         });
 
-        // Notify assignee if different from creator
         if (req.body.assignedTo && String(req.body.assignedTo) !== String(req.user._id)) {
+            const fromUser = await User.findById(req.user._id).select('name'); // ← fetch name
+
             await Notification.create({
                 title: "Task Assigned",
-                message: `${req.user.name} assigned you a task: "${task.title}"`,
+                message: `${fromUser.name} assigned you a task: "${task.title}"`,
                 type: "TASK_ASSIGNED",
                 userId: req.body.assignedTo,
                 fromUserId: req.user._id,
@@ -53,11 +55,12 @@ export const assignTask = async (req, res) => {
         const task = await taskService.updateTaskService(req.params.id, { assignedTo: assignedTo || null });
         if (!task) return res.status(404).json({ success: false, message: 'Task not found.' });
 
-        // Notify the newly assigned person
         if (assignedTo && String(assignedTo) !== String(req.user._id)) {
+            const fromUser = await User.findById(req.user._id).select('name'); // ← fetch name
+
             await Notification.create({
                 title: "Task Assigned",
-                message: `${req.user.name} assigned you a task: "${task.title}"`,
+                message: `${fromUser.name} assigned you a task: "${task.title}"`,
                 type: "TASK_ASSIGNED",
                 userId: assignedTo,
                 fromUserId: req.user._id,
@@ -85,11 +88,12 @@ export const updateTask = async (req, res) => {
         const task = await taskService.updateTaskService(req.params.id, req.body);
         if (!task) return res.status(404).json({ success: false, message: 'Task not found.' });
 
-        // Notify assignee about the update (if someone else made the change)
         if (task.assignedTo && String(task.assignedTo) !== String(req.user._id)) {
+            const fromUser = await User.findById(req.user._id).select('name'); // ← fetch name
+
             await Notification.create({
                 title: "Task Updated",
-                message: `${req.user.name} updated the task: "${task.title}"`,
+                message: `${fromUser.name} updated the task: "${task.title}"`,
                 type: "TASK_UPDATED",
                 userId: task.assignedTo,
                 fromUserId: req.user._id,
@@ -103,8 +107,6 @@ export const updateTask = async (req, res) => {
         return res.status(400).json({ success: false, message: err.message });
     }
 };
-
-// getAllTasksByProject, getMyTasks, getTaskById, linkTaskToEpic, deleteTask stay the same
 
 // ── Get All Tasks for a Project ────────────────────────────────────────────────
 export const getAllTasksByProject = async (req, res) => {

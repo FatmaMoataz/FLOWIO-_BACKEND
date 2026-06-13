@@ -1,6 +1,7 @@
 import postService from './post.service.js';
 import Notification from '../../models/notification.js';
-import Post from '../../models/post.js'; // adjust path if needed
+import Post from '../../models/post.js';
+import {User} from '../../models/user.js';
 
 const createPost = async (req, res, next) => {
   try {
@@ -39,12 +40,15 @@ const likePost = async (req, res, next) => {
   try {
     const result = await postService.likePostService(req.params.id, req.user._id);
 
-    // Notify post owner
-    const post = await Post.findById(req.params.id).select('userId');
+    const [post, fromUser] = await Promise.all([
+      Post.findById(req.params.id).select('userId'),
+      User.findById(req.user._id).select('name') 
+    ]);
+
     if (post && String(post.userId) !== String(req.user._id)) {
       await Notification.create({
         title: "New Like",
-        message: `${req.user.name} liked your post`,
+        message: `${fromUser.name} liked your post`,
         type: "LIKE",
         userId: post.userId,
         fromUserId: req.user._id,
@@ -67,12 +71,15 @@ const addComment = async (req, res, next) => {
       req.body.content
     );
 
-    // Notify post owner
-    const post = await Post.findById(req.params.id).select('userId');
+    const [post, fromUser] = await Promise.all([
+      Post.findById(req.params.id).select('userId'),
+      User.findById(req.user._id).select('name')
+    ]);
+
     if (post && String(post.userId) !== String(req.user._id)) {
       await Notification.create({
         title: "New Comment",
-        message: `${req.user.name} commented: "${req.body.content?.slice(0, 60)}"`,
+        message: `${fromUser.name} commented: "${req.body.content?.slice(0, 60)}"`,
         type: "COMMENT",
         userId: post.userId,
         fromUserId: req.user._id,
