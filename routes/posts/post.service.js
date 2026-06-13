@@ -60,7 +60,7 @@ const injectPollResults = (post, currentUserId) => {
 // Centralised so every service uses the exact same shape.
 const populatePost = (query) =>
   query
-    .populate('userId', 'name email role specialization')
+    .populate('userId', 'name email role specialization avatar') // add avatar field for frontend use
     .populate({
       path: 'pollId',
       select: 'question options totalVotes',
