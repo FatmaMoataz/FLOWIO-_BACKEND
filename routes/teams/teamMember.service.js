@@ -3,7 +3,7 @@ import { TeamMember } from '../../models/teamMember.model.js';
 
 // ── Shared populate config ─────────────────────────────────────────────────────
 const TEAM_MEMBER_POPULATE = [
-    { path: 'userId', select: 'name email specialization' },
+    { path: 'userId', select: 'name email specialization role avatar' },
     { path: 'teamId', select: 'name companyId' }
 ];
 
