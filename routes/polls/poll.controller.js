@@ -1,39 +1,44 @@
-// poll.controller.js — FULL REWRITE
-
 import pollService from "./poll.service.js";
+import Notification from '../../models/notification.js';
+import Poll from '../../models/poll.js'; // adjust path if needed
 import { createPollSchema, votePollSchema, idParamSchema } from "../../validations/pollValidation.js";
 
-// ── CREATE ─────────────────────────────────────────────────────────────────────
 const createPoll = async (req, res, next) => {
   const pollData = { ...req.body, userId: req.user._id };
 
   const { error } = createPollSchema.validate(pollData);
-  if (error)
-    return res
-      .status(400)
-      .json({ success: false, message: error.details[0].message });
+  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
   try {
     const result = await pollService.createPollService(pollData);
+
+    // Notify all targetted users about the new poll
+    const notifyUserIds = req.body.notifyUserIds || [];
+    if (notifyUserIds.length > 0) {
+      await Promise.all(
+        notifyUserIds
+          .filter(id => String(id) !== String(req.user._id))
+          .map(userId =>
+            Notification.create({
+              title: "New Poll",
+              message: `${req.user.name} created a poll: "${pollData.question?.slice(0, 60)}"`,
+              type: "POLLS",
+              userId,
+              fromUserId: req.user._id,
+              referenceId: result.data._id,
+              referenceModel: "Poll",
+            })
+          )
+      );
+    }
+
     res.status(201).json(result);
   } catch (err) {
     next(err);
   }
 };
 
-// ── GET ALL ────────────────────────────────────────────────────────────────────
-const getAllPolls = async (req, res, next) => {
-  try {
-    const result = await pollService.getAllPollsService();
-    res.status(200).json(result);
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ── VOTE ───────────────────────────────────────────────────────────────────────
 const votePoll = async (req, res, next) => {
-  // userId always comes from the verified token, never from req.body
   const voteData = {
     pollId: req.body.pollId,
     optionText: req.body.optionText,
@@ -41,20 +46,42 @@ const votePoll = async (req, res, next) => {
   };
 
   const { error } = votePollSchema.validate(voteData);
-  if (error)
-    return res
-      .status(400)
-      .json({ success: false, message: error.details[0].message });
+  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
   try {
     const result = await pollService.votePollService(voteData);
+
+    // Notify poll creator about the vote
+    const poll = await Poll.findById(req.body.pollId).select('userId question');
+    if (poll && String(poll.userId) !== String(req.user._id)) {
+      await Notification.create({
+        title: "New Vote",
+        message: `${req.user.name} voted on your poll: "${poll.question?.slice(0, 60)}"`,
+        type: "POLLS",
+        userId: poll.userId,
+        fromUserId: req.user._id,
+        referenceId: poll._id,
+        referenceModel: "Poll",
+      });
+    }
+
     res.status(200).json(result);
   } catch (err) {
     if (err.code === 11000) {
-      return res
-        .status(400)
-        .json({ success: false, message: "You have already voted in this poll!" });
+      return res.status(400).json({ success: false, message: "You have already voted in this poll!" });
     }
+    next(err);
+  }
+};
+
+// getAllPolls and getResults stay exactly the same
+
+// ── GET ALL ────────────────────────────────────────────────────────────────────
+const getAllPolls = async (req, res, next) => {
+  try {
+    const result = await pollService.getAllPollsService();
+    res.status(200).json(result);
+  } catch (err) {
     next(err);
   }
 };

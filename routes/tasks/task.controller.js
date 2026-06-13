@@ -1,35 +1,110 @@
 import taskService from './task.service.js';
+import Notification from '../../models/notification.js';
 import { validateTask, validateTaskUpdate } from '../../models/task.model.js';
 
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
-// ── Create Task (project-scoped OR personal) ───────────────────────────────────
 export const createTask = async (req, res) => {
     const projectId = req.params.projectId ?? null;
 
-    // If a projectId was supplied in the URL, validate it
     if (projectId && !isValidObjectId(projectId)) {
         return res.status(400).json({ success: false, message: 'Invalid projectId in URL.' });
     }
 
     const { error } = validateTask(req.body);
     if (error) {
-        const messages = error.details.map(d => d.message);
-        return res.status(400).json({ success: false, errors: messages });
+        return res.status(400).json({ success: false, errors: error.details.map(d => d.message) });
     }
 
     try {
         const task = await taskService.createTaskService({
             ...req.body,
-            projectId,                      // null for personal tasks
-            assignedTo: req.user._id        // auto-assign to the logged-in user
+            projectId,
+            assignedTo: req.user._id
         });
+
+        // Notify assignee if different from creator
+        if (req.body.assignedTo && String(req.body.assignedTo) !== String(req.user._id)) {
+            await Notification.create({
+                title: "Task Assigned",
+                message: `${req.user.name} assigned you a task: "${task.title}"`,
+                type: "TASK_ASSIGNED",
+                userId: req.body.assignedTo,
+                fromUserId: req.user._id,
+                referenceId: task._id,
+                referenceModel: "Task",
+            });
+        }
+
         return res.status(201).json({ success: true, data: task });
     } catch (err) {
-        console.error('[createTask]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
 };
+
+export const assignTask = async (req, res) => {
+    const { assignedTo } = req.body;
+    if (assignedTo !== null && assignedTo !== undefined) {
+        if (!isValidObjectId(String(assignedTo))) {
+            return res.status(400).json({ success: false, message: 'Invalid assignedTo userId.' });
+        }
+    }
+    try {
+        const task = await taskService.updateTaskService(req.params.id, { assignedTo: assignedTo || null });
+        if (!task) return res.status(404).json({ success: false, message: 'Task not found.' });
+
+        // Notify the newly assigned person
+        if (assignedTo && String(assignedTo) !== String(req.user._id)) {
+            await Notification.create({
+                title: "Task Assigned",
+                message: `${req.user.name} assigned you a task: "${task.title}"`,
+                type: "TASK_ASSIGNED",
+                userId: assignedTo,
+                fromUserId: req.user._id,
+                referenceId: task._id,
+                referenceModel: "Task",
+            });
+        }
+
+        const message = assignedTo ? 'Task assigned successfully.' : 'Task unassigned successfully.';
+        return res.status(200).json({ success: true, message, data: task });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+export const updateTask = async (req, res) => {
+    if (!req.body || Object.keys(req.body).length === 0) {
+        return res.status(400).json({ success: false, message: 'No data provided for update.' });
+    }
+    const { error } = validateTaskUpdate(req.body);
+    if (error) {
+        return res.status(400).json({ success: false, errors: error.details.map(d => d.message) });
+    }
+    try {
+        const task = await taskService.updateTaskService(req.params.id, req.body);
+        if (!task) return res.status(404).json({ success: false, message: 'Task not found.' });
+
+        // Notify assignee about the update (if someone else made the change)
+        if (task.assignedTo && String(task.assignedTo) !== String(req.user._id)) {
+            await Notification.create({
+                title: "Task Updated",
+                message: `${req.user.name} updated the task: "${task.title}"`,
+                type: "TASK_UPDATED",
+                userId: task.assignedTo,
+                fromUserId: req.user._id,
+                referenceId: task._id,
+                referenceModel: "Task",
+            });
+        }
+
+        return res.status(200).json({ success: true, data: task });
+    } catch (err) {
+        return res.status(400).json({ success: false, message: err.message });
+    }
+};
+
+// getAllTasksByProject, getMyTasks, getTaskById, linkTaskToEpic, deleteTask stay the same
 
 // ── Get All Tasks for a Project ────────────────────────────────────────────────
 export const getAllTasksByProject = async (req, res) => {
@@ -81,45 +156,6 @@ export const getTaskById = async (req, res) => {
         return res.status(200).json({ success: true, data: task });
     } catch (err) {
         console.error('[getTaskById]', err);
-        return res.status(500).json({ success: false, message: err.message });
-    }
-};
-
-// ── Update Task ────────────────────────────────────────────────────────────────
-export const updateTask = async (req, res) => {
-    if (!req.body || Object.keys(req.body).length === 0) {
-        return res.status(400).json({ success: false, message: 'No data provided for update.' });
-    }
-    const { error } = validateTaskUpdate(req.body);
-    if (error) {
-        const messages = error.details.map(d => d.message);
-        return res.status(400).json({ success: false, errors: messages });
-    }
-    try {
-        const task = await taskService.updateTaskService(req.params.id, req.body);
-        if (!task) return res.status(404).json({ success: false, message: 'Task not found.' });
-        return res.status(200).json({ success: true, data: task });
-    } catch (err) {
-        console.error('[updateTask]', err);
-        return res.status(400).json({ success: false, message: err.message });
-    }
-};
-
-// ── Assign Task ────────────────────────────────────────────────────────────────
-export const assignTask = async (req, res) => {
-    const { assignedTo } = req.body;
-    if (assignedTo !== null && assignedTo !== undefined) {
-        if (!isValidObjectId(String(assignedTo))) {
-            return res.status(400).json({ success: false, message: 'Invalid assignedTo userId.' });
-        }
-    }
-    try {
-        const task = await taskService.updateTaskService(req.params.id, { assignedTo: assignedTo || null });
-        if (!task) return res.status(404).json({ success: false, message: 'Task not found.' });
-        const message = assignedTo ? 'Task assigned successfully.' : 'Task unassigned successfully.';
-        return res.status(200).json({ success: true, message, data: task });
-    } catch (err) {
-        console.error('[assignTask]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
 };
