@@ -75,15 +75,31 @@ const populatePost = (query) =>
     .lean(); // lean() = plain JS objects, safe to mutate in injectPollResults
 
 // ── After lean(), userId has no avatar — attach it here ───────────────────────
+// const attachAvatars = (posts) =>
+//   posts.map((post) => {
+//     if (post.userId && typeof post.userId === 'object') {
+//       post.userId.avatar = getAvatarUrl(post.userId);
+//     }
+//     if (Array.isArray(post.comments)) {
+//       post.comments = post.comments.map((c) => {
+//         if (c.userId && typeof c.userId === 'object') {
+//           c.userId.avatar = getAvatarUrl(c.userId);
+//         }
+//         return c;
+//       });
+//     }
+//     return post;
+//   });
+// ✅ fix
 const attachAvatars = (posts) =>
   posts.map((post) => {
     if (post.userId && typeof post.userId === 'object') {
-      post.userId.avatar = getAvatarUrl(post.userId);
+      post.userId.avatar = post.userId.avatar || getAvatarUrl(post.userId);
     }
     if (Array.isArray(post.comments)) {
       post.comments = post.comments.map((c) => {
         if (c.userId && typeof c.userId === 'object') {
-          c.userId.avatar = getAvatarUrl(c.userId);
+          c.userId.avatar = c.userId.avatar || getAvatarUrl(c.userId);
         }
         return c;
       });
@@ -244,7 +260,9 @@ const addCommentService = async (postId, userId, content) => {
   // Attach avatar since User has no avatar field
   const commentObj = comment.toObject();
   if (commentObj.userId && typeof commentObj.userId === 'object') {
-    commentObj.userId.avatar = getAvatarUrl(commentObj.userId);
+    // commentObj.userId.avatar = getAvatarUrl(commentObj.userId);
+    // ✅ fix
+    commentObj.userId.avatar = commentObj.userId.avatar || getAvatarUrl(commentObj.userId);
   }
 
   return {

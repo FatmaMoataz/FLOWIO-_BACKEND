@@ -15,6 +15,7 @@ router.post(
 
 router.get(
   "/",
+  auth,
   postController.getAllPosts
 );
 
