@@ -140,6 +140,22 @@ const updatePost = async (req, res, next) => {
   }
 };
 
+// const deletePost = async (req, res, next) => {
+//   try {
+//     const result = await postService.deletePostService(
+//       req.params.id,
+//       req.user._id
+//     );
+
+//     if (!result.success) {
+//       return res.status(400).json(result);
+//     }
+
+//     return res.status(200).json(result);
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 const deletePost = async (req, res, next) => {
   try {
     const result = await postService.deletePostService(

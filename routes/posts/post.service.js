@@ -1,5 +1,3 @@
-// post.service.js — complete rewrite
-
 import Post from '../../models/post.js';
 import Poll from '../../models/poll.js';
 import Comment from '../../models/comment.js';
@@ -220,23 +218,45 @@ const updatePostService = async (id, data, userId) => {
 };
 
 // ── DELETE POST ────────────────────────────────────────────────────────────────
-const deletePostService = async (id, userId) => {
-  const post = await Post.findById(id);
+// const deletePostService = async (id, userId) => {
+//   const post = await Post.findById(id);
 
-  if (!post) return { success: false, message: 'Post not found' };
-  if (post.userId.toString() !== userId.toString()) {
-    return { success: false, message: 'Unauthorized' };
+//   if (!post) return { success: false, message: 'Post not found' };
+//   if (post.userId.toString() !== userId.toString()) {
+//     return { success: false, message: 'Unauthorized' };
+//   }
+
+//   // Clean up linked poll and all comments
+//   if (post.pollId) {
+//     await Poll.findByIdAndDelete(post.pollId);
+//     await PollVote.deleteMany({ pollId: post.pollId });
+//   }
+//   await Comment.deleteMany({ postId: id });
+//   await Post.findByIdAndDelete(id);
+
+//   return { success: true, message: 'Post deleted successfully' };
+// };
+export const deletePostService = async (postId, userId) => {
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    return { success: false, message: "Post not found" };
   }
 
-  // Clean up linked poll and all comments
-  if (post.pollId) {
-    await Poll.findByIdAndDelete(post.pollId);
-    await PollVote.deleteMany({ pollId: post.pollId });
+  if (String(post.userId) !== String(userId)) {
+    return { success: false, message: "You are not authorized to delete this post" };
   }
-  await Comment.deleteMany({ postId: id });
-  await Post.findByIdAndDelete(id);
 
-  return { success: true, message: 'Post deleted successfully' };
+  // Clean up related data
+  await Promise.all([
+    Comment.deleteMany({ _id: { $in: post.comments } }),
+    post.pollId ? PollVote.deleteMany({ pollId: post.pollId }) : Promise.resolve(),
+    post.pollId ? Poll.findByIdAndDelete(post.pollId) : Promise.resolve(),
+  ]);
+
+  await Post.findByIdAndDelete(postId);
+
+  return { success: true, message: "Post deleted successfully" };
 };
 
 // ── LIKE / UNLIKE POST ─────────────────────────────────────────────────────────
