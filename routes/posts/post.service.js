@@ -275,13 +275,21 @@ const likePostService = async (postId, userId) => {
 };
 
 const unlikePostService = async (postId, userId) => {
-  const post = await Post.findById(postId);
-  if (!post) return { success: false, message: 'Post not found' };
+  if (!postId || !userId) {
+    return { success: false, message: "Missing postId or userId" };
+  }
 
-  post.likes = post.likes.filter((id) => id.toString() !== userId.toString());
+  const post = await Post.findById(postId);
+  if (!post) return { success: false, message: "Post not found" };
+
+  post.likes = post.likes.filter((id) => String(id) !== String(userId));
   await post.save();
 
-  return { success: true, message: 'Post unliked successfully', data: { likes: post.likes } };
+  return {
+    success: true,
+    message: "Post unliked successfully",
+    data: { likes: post.likes },
+  };
 };
 
 // ── ADD COMMENT ────────────────────────────────────────────────────────────────

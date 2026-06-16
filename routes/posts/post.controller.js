@@ -175,10 +175,18 @@ const deletePost = async (req, res, next) => {
 
 const unlikePost = async (req, res, next) => {
   try {
+    if (!req.user?._id) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
     const result = await postService.unlikePostService(
       req.params.id,
       req.user._id
     );
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
 
     return res.status(200).json(result);
   } catch (error) {

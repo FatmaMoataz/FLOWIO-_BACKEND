@@ -49,6 +49,7 @@ router.post(
 
 router.delete(
   "/:id/like",
+  auth,
   validate(idParamSchema, "params"),
   postController.unlikePost
 );
