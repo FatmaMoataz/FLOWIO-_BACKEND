@@ -12,48 +12,48 @@ export const createPollService = async (data) => {
   };
 };
 
+// ── HELPER: build a fully enriched poll for a given user ───────────────────────
+const buildEnrichedPoll = async (poll, userId) => {
+  const allVotes = await PollVote.find({ pollId: poll._id });
+  const totalVotes = allVotes.length;
+  const myVote = userId
+    ? allVotes.find((v) => String(v.userId) === String(userId))
+    : null;
+
+  const optionsWithCounts = poll.options.map((option) => {
+    const voteCount = allVotes.filter((v) => v.optionText === option.text).length;
+    const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+    const votedByMe = myVote ? myVote.optionText === option.text : false;
+
+    return {
+      _id: option._id,
+      text: option.text,
+      voteCount,
+      percentage,
+      votedByMe,
+    };
+  });
+
+  return {
+    _id: poll._id,
+    question: poll.question,
+    options: optionsWithCounts,
+    totalVotes,
+    myVotedOption: myVote ? myVote.optionText : null,
+    createdAt: poll.createdAt,
+  };
+};
+
 // ── GET ALL POLLS WITH VOTE COUNTS ──────────────────────────────────────────────
-export const getAllPollsService = async () => {
+export const getAllPollsService = async (userId) => {
   const polls = await Poll.find()
     .populate("userId")
     .populate("postId")
     .populate("communityId");
 
-  // Get all votes for all polls
-  const pollIds = polls.map(p => p._id);
-  const allVotes = await PollVote.find({ 
-    pollId: { $in: pollIds } 
-  });
-
-  // Enrich each poll with vote counts
-  const enrichedPolls = polls.map(poll => {
-    const pollVotes = allVotes.filter(v => 
-      v.pollId.toString() === poll._id.toString()
-    );
-    
-    const totalVotes = pollVotes.length;
-    
-    // Calculate vote counts for each option
-    const optionsWithCounts = poll.options.map(option => {
-      const voteCount = pollVotes.filter(v => v.optionText === option.text).length;
-      const percentage = totalVotes > 0 
-        ? Math.round((voteCount / totalVotes) * 100) 
-        : 0;
-      
-      return {
-        _id: option._id,
-        text: option.text,
-        voteCount: voteCount,
-        percentage: percentage,
-      };
-    });
-
-    return {
-      ...poll.toObject(),
-      options: optionsWithCounts,
-      totalVotes: totalVotes,
-    };
-  });
+  const enrichedPolls = await Promise.all(
+    polls.map((poll) => buildEnrichedPoll(poll, userId))
+  );
 
   return {
     success: true,
@@ -62,7 +62,7 @@ export const getAllPollsService = async () => {
   };
 };
 
-// ── VOTE ───────────────────────────────────────────────────────────────────────
+// ── VOTE / CHANGE VOTE / REMOVE VOTE ────────────────────────────────────────────
 export const votePollService = async (data = {}) => {
   if (!data || typeof data !== "object") {
     throw new Error("Vote payload is missing or invalid");
@@ -70,101 +70,62 @@ export const votePollService = async (data = {}) => {
 
   const { pollId, optionText, userId } = data;
 
-  // Check if user already voted
-  const existingVote = await PollVote.findOne({ pollId, userId });
-  if (existingVote) {
-    throw new Error("You have already voted in this poll!");
-  }
-
-  // Create the vote
-  await PollVote.create({
-    pollId,
-    optionText,
-    userId,
-  });
-
-  // Get the poll with updated vote counts
   const poll = await Poll.findById(pollId);
   if (!poll) throw new Error("Poll not found");
 
-  // Get all votes for this poll
-  const allVotes = await PollVote.find({ pollId });
-  const totalVotes = allVotes.length;
+  const validOption = poll.options.some((opt) => opt.text === optionText);
+  if (!validOption) throw new Error("Invalid poll option");
 
-  // Calculate vote counts for each option
-  const optionsWithCounts = poll.options.map(option => {
-    const voteCount = allVotes.filter(v => v.optionText === option.text).length;
-    const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
-    const votedByMe = option.text === optionText;
-    
-    return {
-      _id: option._id,
-      text: option.text,
-      voteCount: voteCount,
-      percentage: percentage,
-      votedByMe: votedByMe
-    };
-  });
+  const existingVote = await PollVote.findOne({ pollId, userId });
 
-  // Return the complete updated poll
-  const updatedPoll = {
-    _id: poll._id,
-    question: poll.question,
-    options: optionsWithCounts,
-    totalVotes: totalVotes,
-    createdAt: poll.createdAt
+  let action;
+  if (existingVote && existingVote.optionText === optionText) {
+    // Clicked same option again → remove (toggle off)
+    await PollVote.deleteOne({ _id: existingVote._id });
+    action = "removed";
+  } else if (existingVote) {
+    // Clicked a different option → change vote
+    existingVote.optionText = optionText;
+    await existingVote.save();
+    action = "changed";
+  } else {
+    // No previous vote → create
+    await PollVote.create({ pollId, optionText, userId });
+    action = "added";
+  }
+
+  const updatedPoll = await buildEnrichedPoll(poll, userId);
+
+  const messages = {
+    added: "Vote added successfully",
+    changed: "Vote updated successfully",
+    removed: "Vote removed successfully",
   };
 
   return {
     success: true,
-    message: "Vote added successfully",
-    data: updatedPoll
+    action,
+    message: messages[action],
+    data: updatedPoll,
   };
 };
 
 // ── GET RESULTS (single poll) ────────────────────────────────────────────────
-export const getPollResultsService = async (pollId) => {
+export const getPollResultsService = async (pollId, userId) => {
   const poll = await Poll.findById(pollId);
   if (!poll) throw new Error("Poll not found");
 
-  const votes = await PollVote.find({ pollId });
-  const totalVotes = votes.length;
-
-  const results = {};
-  poll.options.forEach(opt => {
-    results[opt.text] = 0;
-  });
-
-  votes.forEach((v) => {
-    if (results[v.optionText] !== undefined) {
-      results[v.optionText]++;
-    }
-  });
-
-  // Calculate percentages
-  const optionsWithPercentages = poll.options.map(option => ({
-    text: option.text,
-    voteCount: results[option.text] || 0,
-    percentage: totalVotes > 0 
-      ? Math.round(((results[option.text] || 0) / totalVotes) * 100)
-      : 0
-  }));
+  const enrichedPoll = await buildEnrichedPoll(poll, userId);
 
   return {
     success: true,
-    data: {
-      question: poll.question,
-      totalVotes,
-      options: optionsWithPercentages,
-      breakdown: results
-    },
+    data: enrichedPoll,
   };
 };
 
-// كائن default موحد لتسهيل الاستدعاء في الـ Controller
 export default {
   createPollService,
   getAllPollsService,
   votePollService,
-  getPollResultsService
+  getPollResultsService,
 };

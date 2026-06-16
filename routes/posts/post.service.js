@@ -150,7 +150,17 @@ const createPostService = async (data) => {
 
 // ── GET ALL POSTS ──────────────────────────────────────────────────────────────
 const getAllPostsService = async (currentUserId) => {
-  const posts = await populatePost(Post.find().sort({ createdAt: -1 }));
+  const posts = await Post.find()
+  .populate("userId")
+  .populate({
+    path: "comments",
+    populate: { path: "userId", select: "name avatar role" }
+  })
+  .populate({
+    path: "pollId",
+    // see below for vote-aware population
+  })
+  .sort({ createdAt: -1 });
 
   const withAvatars = attachAvatars(posts);
   const withPolls = withAvatars.map((p) => injectPollResults(p, currentUserId));
@@ -164,7 +174,17 @@ const getAllPostsService = async (currentUserId) => {
 
 // ── GET POST BY ID ─────────────────────────────────────────────────────────────
 const getPostByIdService = async (id, currentUserId) => {
-  const post = await populatePost(Post.findById(id));
+  const posts = await Post.find()
+  .populate("userId")
+  .populate({
+    path: "comments",
+    populate: { path: "userId", select: "name avatar role" }
+  })
+  .populate({
+    path: "pollId",
+    // see below for vote-aware population
+  })
+  .sort({ createdAt: -1 });
 
   if (!post) {
     return { success: false, message: 'Post not found' };
@@ -246,7 +266,17 @@ const unlikePostService = async (postId, userId) => {
 
 // ── ADD COMMENT ────────────────────────────────────────────────────────────────
 const addCommentService = async (postId, userId, content) => {
-  const post = await Post.findById(postId);
+  const posts = await Post.find()
+  .populate("userId")
+  .populate({
+    path: "comments",
+    populate: { path: "userId", select: "name avatar role" }
+  })
+  .populate({
+    path: "pollId",
+    // see below for vote-aware population
+  })
+  .sort({ createdAt: -1 });
   if (!post) return { success: false, message: 'Post not found' };
 
   const comment = await Comment.create({ content, userId, postId });

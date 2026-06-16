@@ -1,6 +1,6 @@
 import pollService from "./poll.service.js";
 import Notification from '../../models/notification.js';
-import Poll from '../../models/poll.js'; 
+import Poll from '../../models/poll.js';
 import { User } from '../../models/user.js';
 import { createPollSchema, votePollSchema, idParamSchema } from "../../validations/pollValidation.js";
 
@@ -19,8 +19,8 @@ const createPoll = async (req, res, next) => {
 
       await Promise.all(
         notifyUserIds
-          .filter(id => String(id) !== String(req.user._id))
-          .map(userId =>
+          .filter((id) => String(id) !== String(req.user._id))
+          .map((userId) =>
             Notification.create({
               title: "New Poll",
               message: `${fromUser.name} created a poll: "${pollData.question?.slice(0, 60)}"`,
@@ -48,49 +48,43 @@ const votePoll = async (req, res, next) => {
   };
 
   const { error } = votePollSchema.validate(voteData);
-  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
+  if (error) {
+    return res.status(400).json({ success: false, message: error.details[0].message });
+  }
 
   try {
     const result = await pollService.votePollService(voteData);
-    
-    const [poll, fromUser] = await Promise.all([
-      Poll.findById(req.body.pollId).select('userId question'),
-      User.findById(req.user._id).select('name'),
-    ]);
 
-    if (poll && String(poll.userId) !== String(req.user._id)) {
-      await Notification.create({
-        title: "New Vote",
-        message: `${fromUser.name} voted on your poll: "${poll.question?.slice(0, 60)}"`,
-        type: "POLLS",
-        userId: poll.userId,
-        fromUserId: req.user._id,
-        referenceId: poll._id,
-        referenceModel: "Poll",
-      });
+    // Only notify the poll owner on a fresh vote being added (not on change/remove,
+    // and never notify yourself)
+    if (result.action === "added") {
+      const [poll, fromUser] = await Promise.all([
+        Poll.findById(voteData.pollId).select('userId question'),
+        User.findById(req.user._id).select('name'),
+      ]);
+
+      if (poll && String(poll.userId) !== String(req.user._id)) {
+        await Notification.create({
+          title: "New Vote",
+          message: `${fromUser.name} voted on your poll: "${poll.question?.slice(0, 60)}"`,
+          type: "POLLS",
+          userId: poll.userId,
+          fromUserId: req.user._id,
+          referenceId: poll._id,
+          referenceModel: "Poll",
+        });
+      }
     }
 
-    // Send back the updated poll data
-    res.status(200).json({
-      success: true,
-      message: "Vote added successfully",
-      data: result.data
-    });
-    
+    res.status(200).json(result);
   } catch (err) {
-    if (err.code === 11000 || err.message === "You have already voted in this poll!") {
-      return res.status(400).json({ 
-        success: false, 
-        message: "You have already voted in this poll!" 
-      });
-    }
     next(err);
   }
 };
 
 const getAllPolls = async (req, res, next) => {
   try {
-    const result = await pollService.getAllPollsService();
+    const result = await pollService.getAllPollsService(req.user?._id);
     res.status(200).json(result);
   } catch (err) {
     next(err);
@@ -99,13 +93,12 @@ const getAllPolls = async (req, res, next) => {
 
 const getResults = async (req, res, next) => {
   const { error } = idParamSchema.validate({ id: req.params.id });
-  if (error)
-    return res
-      .status(400)
-      .json({ success: false, message: error.details[0].message });
+  if (error) {
+    return res.status(400).json({ success: false, message: error.details[0].message });
+  }
 
   try {
-    const result = await pollService.getPollResultsService(req.params.id);
+    const result = await pollService.getPollResultsService(req.params.id, req.user?._id);
     res.status(200).json(result);
   } catch (err) {
     next(err);
