@@ -6,37 +6,47 @@ import Joi from 'joi';
  * Validates the request body for creating an Epic.
  * Note: `companyId` is required and must be a valid Mongo ObjectId string.
  */
-const validateCreateEpic = (data) => {
-  const schema = Joi.object({
-    name: Joi.string().trim().required().messages({
-      'string.empty': 'Epic name cannot be empty.',
-      'any.required': 'Epic name is required.',
-    }),
-    description: Joi.string().trim().optional().allow(''),
-    status: Joi.string()
-      .valid('To Do', 'In Progress', 'Done')
-      .default('To Do')
-      .optional(),
-    companyId: Joi.string()
-      .pattern(/^[0-9a-fA-F]{24}$/, 'ObjectId')
-      .required()
-      .messages({
-        'string.pattern.name': 'companyId must be a valid MongoDB ObjectId.',
-        'any.required': 'companyId is required.',
-      }),
-  });
+// const validateCreateEpic = (data) => {
+//   const schema = Joi.object({
+//     name: Joi.string().trim().required().messages({
+//       'string.empty': 'Epic name cannot be empty.',
+//       'any.required': 'Epic name is required.',
+//     }),
+//     description: Joi.string().trim().optional().allow(''),
+//     status: Joi.string()
+//       .valid('To Do', 'In Progress', 'Done')
+//       .default('To Do')
+//       .optional(),
+//     companyId: Joi.string()
+//       .pattern(/^[0-9a-fA-F]{24}$/, 'ObjectId')
+//       .required()
+//       .messages({
+//         'string.pattern.name': 'companyId must be a valid MongoDB ObjectId.',
+//         'any.required': 'companyId is required.',
+//       }),
+//   });
 
-  return schema.validate(data, { abortEarly: false });
-};
+//   return schema.validate(data, { abortEarly: false });
+// };
 
 // ── Task Validation ────────────────────────────────────────────────────────────
+export function validateCreateEpic(data) {
+  const schema = Joi.object({
+    name:        Joi.string().min(1).max(200).required(),
+    description: Joi.string().max(1000).optional().allow(''),
+    status:      Joi.string().valid('To Do', 'In Progress', 'Done').optional(),
+    companyId:   Joi.string().hex().length(24).required(),
+    projectId:   Joi.string().hex().length(24).optional().allow(null), // ✅ new
+  });
+  return schema.validate(data, { abortEarly: false });
+}
 
 /**
  * Validates the request body for creating a Task.
  * Note: `creator` is intentionally excluded — it is injected from req.user._id
  * in the route handler and should never come from the client.
  */
-const validateCreateTask = (data) => {
+export const validateCreateTask = (data) => {
   const schema = Joi.object({
     title: Joi.string().trim().required().messages({
       'string.empty': 'Task title cannot be empty.',
@@ -85,5 +95,3 @@ const validateCreateTask = (data) => {
 
   return schema.validate(data, { abortEarly: false });
 };
-
-export { validateCreateEpic, validateCreateTask };

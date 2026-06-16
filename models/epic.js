@@ -21,6 +21,12 @@ const epicSchema = new mongoose.Schema(
       ref: 'Company',
       required: [true, 'Company reference is required'],
     },
+    // ✅ FIX 1: Added projectId so epics are linked to their project
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Project',
+      default: null,
+    },
   },
   {
     timestamps: true,
