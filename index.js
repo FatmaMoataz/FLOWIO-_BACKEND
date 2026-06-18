@@ -29,6 +29,7 @@ import activityLogRoutes from './routes/activityLogs/activityLog.routes.js';
 import meetingRoutes from './routes/meetings/meeting.routes.js';
 import boardRoutes from './routes/boards/board.routes.js';
 import archiveRoutes from './routes/archive/archive.routes.js';
+import activityRoutes from './routes/activityLogs/activityLog.routes.js';
 
 const app = express();
 app.use(cors({
@@ -129,6 +130,7 @@ app.use('/api/activity',    activityLogRoutes);
 app.use('/api/meetings',    meetingRoutes);
 app.use('/api/boards',      boardRoutes);
 app.use('/api/archive',     archiveRoutes);
+app.use('/api/activities', activityRoutes);
 
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));

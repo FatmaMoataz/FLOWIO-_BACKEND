@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
 // ── Token lifetimes ────────────────────────────────────────────────────────────
-const ACCESS_TOKEN_EXPIRY  = '15m';   // short-lived  — expires in 15 minutes
+const ACCESS_TOKEN_EXPIRY  = '30d';   // short-lived  — expires in 15 minutes
 const REFRESH_TOKEN_EXPIRY = '7d';    // long-lived   — expires in 7 days
 const REFRESH_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in ms for MongoDB
 

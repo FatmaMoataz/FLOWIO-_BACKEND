@@ -136,37 +136,59 @@ export const deleteMeeting = async (req, res) => {
 // ── Upload Audio + Trigger AI ──────────────────────────────────────────────────
 export const processAudio = async (req, res) => {
     if (!req.file) {
-        return res.status(400).json({ success: false, message: 'No audio file uploaded. Use field name: audio' });
+        return res.status(400).json({
+            success: false,
+            message: 'No audio file uploaded. Use field name: audio'
+        });
     }
-
+ 
     const { id: meetingId } = req.params;
     if (!isValidObjectId(meetingId)) {
         return res.status(400).json({ success: false, message: 'Invalid meetingId.' });
     }
-
+ 
     try {
         const meeting = await meetingService.getMeetingByIdService(meetingId);
         if (!meeting) {
             return res.status(404).json({ success: false, message: 'Meeting not found.' });
         }
-
-        // Respond immediately — AI processing is async and takes time
-        res.status(202).json({
+ 
+        // ✅ SYNCHRONOUS — we wait for the full AI pipeline to finish
+        // This may take 1-5 minutes depending on audio length.
+        // The request stays open until Python responds.
+        console.log(`[processAudio] Starting AI processing for meeting ${meetingId}...`);
+ 
+        const result = await aiService.processAudioWithAI(
+            meetingId,
+            req.file.path,
+            meeting.attendees
+        );
+ 
+        console.log(`[processAudio] AI done. ${result.insertedTasks.length} tasks created.`);
+ 
+        // Fetch the saved log to return full data to frontend
+        const log = await meetingService.getMeetingLogService(meetingId);
+ 
+        return res.status(200).json({
             success: true,
-            message: 'Audio received. AI processing started. Check /api/meetings/:id/log for results.'
+            message: `Processing complete. ${result.insertedTasks.length} task(s) extracted and saved.`,
+            data: {
+                transcript:      log.transcript,
+                summary:         log.summaryParagraph,
+                summaryPoints:   log.summaryText,
+                extracted_tasks: log.extracted_tasks,
+                ai_status:       log.ai_status
+            }
         });
-
-        // Run AI in background — don't await in the response chain
-        aiService.processAudioWithAI(meetingId, req.file.path, meeting.attendees)
-            .catch(err => console.error('[processAudio background]', err.message));
-
+ 
     } catch (err) {
         console.error('[processAudio]', err);
-        return res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({
+            success: false,
+            message: 'AI processing failed: ' + err.message
+        });
     }
 };
-
-// ── Get Meeting Log (AI results) ───────────────────────────────────────────────
 export const getMeetingLog = async (req, res) => {
     try {
         const log = await meetingService.getMeetingLogService(req.params.id);

@@ -1,95 +1,102 @@
 import mongoose from 'mongoose';
-import Joi from 'joi';
 
-const activityActionEnum = {
-    created:    'created',
-    updated:    'updated',
-    deleted:    'deleted',
-    uploaded:   'uploaded',
-    assigned:   'assigned',
-    moved:      'moved',
-    commented:  'commented',
-    joined:     'joined',
-    left:       'left'
-};
-
-const activityEntityEnum = {
-    task:       'task',
-    project:    'project',
-    epic:       'epic',
-    team:       'team',
-    company:    'company',
-    file:       'file',
-    meeting:    'meeting',
-    invitation: 'invitation'
-};
+/**
+ * ActivityLog Model — powers the "Recent Activity" dashboard screen
+ *
+ * Each document represents one activity item shown in the UI:
+ *   - "John Sent You an Invitation To Join Meeting" → type: 'invitation'
+ *   - "Meeting With Sarah — summary is ready"       → type: 'meeting_summary'
+ *   - "Task Completed"                              → type: 'task'
+ */
 
 const activityLogSchema = new mongoose.Schema(
     {
-        // Who performed the action
-        performed_by: {
+        // Who RECEIVES this notification (shown in their activity feed)
+        userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
             required: true
         },
-        // What type of entity was affected
-        entity_type: {
-            type: String,
-            enum: Object.values(activityEntityEnum),
-            required: true
-        },
-        // The ID of the affected entity
-        entity_id: {
+
+        // Who PERFORMED the action (e.g. "John" in "John sent you an invitation")
+        performedBy: {
             type: mongoose.Schema.Types.ObjectId,
-            required: true
+            ref: 'User',
+            default: null
         },
-        // What action was performed
-        action: {
+
+        // Activity type — drives icon color and action button in UI
+        type: {
             type: String,
-            enum: Object.values(activityActionEnum),
+            enum: [
+                'invitation',       // red icon  → "Accept" button
+                'meeting_summary',  // yellow icon → "Summary" button
+                'task',             // grey icon  → "Details" button
+                'project',
+                'mention',
+                'general'
+            ],
             required: true
         },
-        // Human-readable description e.g. "John moved task 'Fix bug' to Done"
-        description: {
+
+        // Display title — e.g. "John Sent You an Invitation To Join Meeting"
+        title: {
             type: String,
             required: true,
             trim: true,
-            maxLength: 500
+            maxLength: 200
         },
-        // Optional: store before/after snapshot for auditing
-        metadata: {
-            type: mongoose.Schema.Types.Mixed,
-            default: {}
+
+        // Subtitle/description — e.g. "You have a new invitation to join the Flowio meeting"
+        description: {
+            type: String,
+            trim: true,
+            maxLength: 500,
+            default: ''
+        },
+
+        // The entity this activity refers to (meetingId, taskId, invitationId, etc.)
+        targetId: {
+            type: mongoose.Schema.Types.ObjectId,
+            default: null
+        },
+
+        // What collection targetId refers to — so frontend knows where to navigate
+        targetType: {
+            type: String,
+            enum: ['Meeting', 'Task', 'Invitation', 'Project', 'Epic', null],
+            default: null
+        },
+
+        // The action the user can take from the activity item
+        // Maps to the button shown in the UI
+        actionType: {
+            type: String,
+            enum: ['accept', 'view_summary', 'view_details', 'none'],
+            default: 'none'
+        },
+
+        // false = shows "NEW" badge in UI, true = badge hidden
+        isRead: {
+            type: Boolean,
+            default: false
+        },
+
+        readAt: {
+            type: Date,
+            default: null
         }
     },
     {
-        timestamps: true
+        timestamps: true // createdAt used for "2 min ago" relative time
     }
 );
 
-// Index for fast querying by entity (e.g. "all logs for task X")
-activityLogSchema.index({ entity_type: 1, entity_id: 1 });
-// Index for fast querying by user (e.g. "all actions by user Y")
-activityLogSchema.index({ performed_by: 1 });
+// Index for fast per-user queries sorted by newest first
+activityLogSchema.index({ userId: 1, createdAt: -1 });
+// Index for unread count queries
+activityLogSchema.index({ userId: 1, isRead: 1 });
 
 const ActivityLog = mongoose.model('ActivityLog', activityLogSchema);
 
-// ── Joi Validation ─────────────────────────────────────────────────────────────
-
-function validateActivityLog(data) {
-    const schema = Joi.object({
-        entity_type: Joi.string()
-            .valid(...Object.values(activityEntityEnum))
-            .required(),
-        entity_id: Joi.string().hex().length(24).required(),
-        action: Joi.string()
-            .valid(...Object.values(activityActionEnum))
-            .required(),
-        description: Joi.string().max(500).required(),
-        metadata: Joi.object().optional()
-    });
-
-    return schema.validate(data, { abortEarly: false });
-}
-
-export { ActivityLog, activityActionEnum, activityEntityEnum, validateActivityLog };
+export { ActivityLog };
