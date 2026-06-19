@@ -90,7 +90,7 @@ import './models/meeting.model.js';
 import './models/meetingLog.model.js';
 import './models/refreshToken.model.js';
 import './models/board.model.js';
-import './models/Subtask.model.js';
+import './models/subtask.model.js';
 
 // Middlewares
 app.use(express.json());
