@@ -136,6 +136,7 @@ app.use('/api/archive',     archiveRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/subtasks', subtaskRoutes);
 app.use('/api/stories', storyRoutes);
+
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
     console.log('Morgan enabled...');

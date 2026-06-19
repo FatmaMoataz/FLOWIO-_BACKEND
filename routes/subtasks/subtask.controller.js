@@ -1,5 +1,4 @@
-// إضافة امتداد .js للملفات والموديلات المحلية إجباري
-import subtaskService from './subtask.service.js';
+import { Subtask } from '../../models/subtask.model.js';
 import { validateSubtask, validateSubtaskUpdate } from '../../models/subtask.model.js';
 
 // ── Create Subtask ──────────────────────────────────────────────────────────────
@@ -11,7 +10,7 @@ export const createSubtask = async (req, res) => {
     }
 
     try {
-        const subtask = await subtaskService.createSubtaskService(req.body);
+        const subtask = await Subtask.create(req.body);
         return res.status(201).json({ success: true, data: subtask });
     } catch (err) {
         console.error('[createSubtask]', err);
@@ -19,7 +18,37 @@ export const createSubtask = async (req, res) => {
     }
 };
 
-// ── Get All Subtasks by Task ─────────────────────────────────────────────────────
+// ── Get All Subtasks by Story ───────────────────────────────────────────────────
+export const getAllSubtasksByStory = async (req, res) => {
+    const { storyId } = req.params;
+
+    if (!storyId || !/^[0-9a-fA-F]{24}$/.test(storyId)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Invalid storyId format.' 
+        });
+    }
+
+    try {
+        const subtasks = await Subtask.find({ storyId })
+            .populate('assignee', 'name email')
+            .sort({ createdAt: 1 });
+        
+        return res.status(200).json({ 
+            success: true, 
+            data: subtasks,
+            count: subtasks.length
+        });
+    } catch (err) {
+        console.error('[getAllSubtasksByStory]', err);
+        return res.status(500).json({ 
+            success: false, 
+            message: err.message 
+        });
+    }
+};
+
+// ── Get All Subtasks by Task ────────────────────────────────────────────────────
 export const getAllSubtasksByTask = async (req, res) => {
     const { taskId } = req.params;
 
@@ -28,18 +57,26 @@ export const getAllSubtasksByTask = async (req, res) => {
     }
 
     try {
-        const subtasks = await subtaskService.getAllSubtasksByTaskService(taskId);
-        return res.status(200).json({ success: true, data: subtasks });
+        const subtasks = await Subtask.find({ taskId })
+            .populate('assignee', 'name email')
+            .sort({ createdAt: 1 });
+        
+        return res.status(200).json({ 
+            success: true, 
+            data: subtasks 
+        });
     } catch (err) {
         console.error('[getAllSubtasksByTask]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
 };
 
-// ── Get Subtask by ID ────────────────────────────────────────────────────────────
+// ── Get Subtask by ID ───────────────────────────────────────────────────────────
 export const getSubtaskById = async (req, res) => {
     try {
-        const subtask = await subtaskService.getSubtaskByIdService(req.params.id);
+        const subtask = await Subtask.findById(req.params.id)
+            .populate('assignee', 'name email');
+        
         if (!subtask) {
             return res.status(404).json({ success: false, message: 'Subtask not found.' });
         }
@@ -50,7 +87,7 @@ export const getSubtaskById = async (req, res) => {
     }
 };
 
-// ── Update Subtask ───────────────────────────────────────────────────────────────
+// ── Update Subtask ──────────────────────────────────────────────────────────────
 export const updateSubtask = async (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
         return res.status(400).json({ success: false, message: 'No data provided for update.' });
@@ -63,7 +100,12 @@ export const updateSubtask = async (req, res) => {
     }
 
     try {
-        const subtask = await subtaskService.updateSubtaskService(req.params.id, req.body);
+        const subtask = await Subtask.findByIdAndUpdate(
+            req.params.id, 
+            req.body, 
+            { new: true, runValidators: true }
+        );
+        
         if (!subtask) {
             return res.status(404).json({ success: false, message: 'Subtask not found.' });
         }
@@ -74,32 +116,20 @@ export const updateSubtask = async (req, res) => {
     }
 };
 
-// ── Delete Subtask ───────────────────────────────────────────────────────────────
+// ── Delete Subtask ──────────────────────────────────────────────────────────────
 export const deleteSubtask = async (req, res) => {
     try {
-        const subtask = await subtaskService.deleteSubtaskService(req.params.id);
+        const subtask = await Subtask.findByIdAndDelete(req.params.id);
+        
         if (!subtask) {
             return res.status(404).json({ success: false, message: 'Subtask not found.' });
         }
-        return res.status(200).json({ success: true, message: 'Subtask deleted successfully.' });
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Subtask deleted successfully.' 
+        });
     } catch (err) {
         console.error('[deleteSubtask]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
-};
-
-export const getAllSubtasksByStory = async (req, res) => {
-  const { storyId } = req.params;
-
-  if (!storyId || !/^[0-9a-fA-F]{24}$/.test(storyId)) {
-    return res.status(400).json({ success: false, message: 'Invalid storyId format.' });
-  }
-
-  try {
-    const subtasks = await Subtask.find({ storyId }).sort({ createdAt: 1 });
-    return res.status(200).json({ success: true, data: subtasks });
-  } catch (err) {
-    console.error('[getAllSubtasksByStory]', err);
-    return res.status(500).json({ success: false, message: err.message });
-  }
 };

@@ -26,13 +26,13 @@ const subtaskSchema = new mongoose.Schema(
             enum: Object.values(subtaskStatusEnum),
             default: subtaskStatusEnum.todo
         },
-        // Link to parent Story
+        // ── Link to Story (PRIMARY - use this going forward) ────────────────
         storyId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Story',
-            required: true
+            default: null
         },
-        // Keep taskId for backward compatibility or if subtasks can also be under tasks
+        // ── Link to Task (keep for backward compatibility) ──────────────────
         taskId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Task',
@@ -64,6 +64,11 @@ const subtaskSchema = new mongoose.Schema(
     }
 );
 
+// Indexes for faster queries
+subtaskSchema.index({ storyId: 1 });
+subtaskSchema.index({ taskId: 1 });
+subtaskSchema.index({ companyId: 1 });
+
 const Subtask = mongoose.models.Subtask || mongoose.model('Subtask', subtaskSchema);
 
 // ── Joi Validation ─────────────────────────────────────────────────────────────
@@ -77,10 +82,7 @@ function validateSubtask(data) {
         status: Joi.string()
             .valid(...Object.values(subtaskStatusEnum))
             .optional(),
-        storyId: Joi.string().hex().length(24).required().messages({
-            'string.hex': 'storyId must be a valid MongoDB ObjectId.',
-            'any.required': 'storyId is required.'
-        }),
+        storyId: Joi.string().hex().length(24).optional().allow(null),
         taskId: Joi.string().hex().length(24).optional().allow(null),
         companyId: Joi.string().hex().length(24).required().messages({
             'string.hex': 'companyId must be a valid MongoDB ObjectId.',
