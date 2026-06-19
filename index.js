@@ -30,6 +30,7 @@ import meetingRoutes from './routes/meetings/meeting.routes.js';
 import boardRoutes from './routes/boards/board.routes.js';
 import archiveRoutes from './routes/archive/archive.routes.js';
 import activityRoutes from './routes/activityLogs/activityLog.routes.js';
+import storyRoutes from './routes/stories/story.routes.js';
 
 const app = express();
 app.use(cors({
@@ -91,6 +92,7 @@ import './models/meetingLog.model.js';
 import './models/refreshToken.model.js';
 import './models/board.model.js';
 import './models/subtask.model.js';
+import './models/story.model.js';
 
 // Middlewares
 app.use(express.json());
@@ -133,7 +135,7 @@ app.use('/api/boards',      boardRoutes);
 app.use('/api/archive',     archiveRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/subtasks', subtaskRoutes);
-
+app.use('/api/stories', storyRoutes);
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
     console.log('Morgan enabled...');
