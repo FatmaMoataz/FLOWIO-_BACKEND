@@ -14,7 +14,7 @@ import posts from './routes/posts.js';
 import polls from './routes/poll.js';
 import notifications from './routes/notification.js';
 import reportRoutes from './routes/report/report.routes.js';
-
+import subtaskRoutes from './routes/subtasks/subtask.routes.js';
 // Imports للـ Routes اللي كانت بتستدعى جوه الـ app.use مباشرة
 import companiesRoutes from './routes/companies.js';
 import communitiesRoutes from './routes/communities.js';
@@ -131,6 +131,7 @@ app.use('/api/meetings',    meetingRoutes);
 app.use('/api/boards',      boardRoutes);
 app.use('/api/archive',     archiveRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/subtasks', subtaskRoutes);
 
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
