@@ -87,3 +87,19 @@ export const deleteSubtask = async (req, res) => {
         return res.status(500).json({ success: false, message: err.message });
     }
 };
+
+export const getAllSubtasksByStory = async (req, res) => {
+  const { storyId } = req.params;
+
+  if (!storyId || !/^[0-9a-fA-F]{24}$/.test(storyId)) {
+    return res.status(400).json({ success: false, message: 'Invalid storyId format.' });
+  }
+
+  try {
+    const subtasks = await Subtask.find({ storyId }).sort({ createdAt: 1 });
+    return res.status(200).json({ success: true, data: subtasks });
+  } catch (err) {
+    console.error('[getAllSubtasksByStory]', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
