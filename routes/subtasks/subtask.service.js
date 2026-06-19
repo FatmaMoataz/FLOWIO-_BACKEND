@@ -1,5 +1,5 @@
 // إضافة امتداد .js للموديلات المحلية إجباري
-import { Subtask } from '../../models/subtask.model.js';
+import { Subtask } from '../../models/Subtask.model.js';
 
 // ── Create ─────────────────────────────────────────────────────────────────────
 export const createSubtaskService = async (data) => {

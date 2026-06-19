@@ -58,7 +58,8 @@ const subtaskSchema = new mongoose.Schema(
     }
 );
 
-const Subtask = mongoose.model('Subtask', subtaskSchema);
+// const Subtask = mongoose.model('Subtask', subtaskSchema);
+const Subtask = mongoose.models.Subtask || mongoose.model('Subtask', subtaskSchema);
 
 // ── Joi Validation ─────────────────────────────────────────────────────────────
 
