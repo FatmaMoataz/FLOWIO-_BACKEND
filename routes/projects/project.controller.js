@@ -2,7 +2,6 @@ import projectService from './project.service.js';
 import { validateProject, validateProjectUpdate } from '../../models/project.model.js';
 import { Story } from '../../models/story.model.js';
 
-// ── Create Project ─────────────────────────────────────────────────────────────
 export const createProject = async (req, res) => {
     const { error } = validateProject(req.body);
     if (error) {
@@ -19,7 +18,6 @@ export const createProject = async (req, res) => {
     }
 };
 
-// ── Get All Projects by Company ────────────────────────────────────────────────
 export const getAllProjectsByCompany = async (req, res) => {
     const { companyId } = req.params;
 
@@ -36,7 +34,23 @@ export const getAllProjectsByCompany = async (req, res) => {
     }
 };
 
-// ── Get Project by ID ──────────────────────────────────────────────────────────
+// ✅ NEW — powers Teams.jsx's "Projects" section per team
+export const getProjectsByTeam = async (req, res) => {
+    const { teamId } = req.params;
+
+    if (!teamId || !/^[0-9a-fA-F]{24}$/.test(teamId)) {
+        return res.status(400).json({ success: false, message: 'Invalid teamId format.' });
+    }
+
+    try {
+        const projects = await projectService.getProjectsByTeamService(teamId);
+        return res.status(200).json({ success: true, data: projects });
+    } catch (err) {
+        console.error('[getProjectsByTeam]', err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 export const getProjectById = async (req, res) => {
     try {
         const project = await projectService.getProjectByIdService(req.params.id);
@@ -50,7 +64,6 @@ export const getProjectById = async (req, res) => {
     }
 };
 
-// ── Update Project ─────────────────────────────────────────────────────────────
 export const updateProject = async (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
         return res.status(400).json({ success: false, message: 'No data provided for update.' });
@@ -74,7 +87,6 @@ export const updateProject = async (req, res) => {
     }
 };
 
-// ── Delete Project ─────────────────────────────────────────────────────────────
 export const deleteProject = async (req, res) => {
     try {
         const project = await projectService.deleteProjectService(req.params.id);
@@ -96,11 +108,10 @@ export const updateProjectStatus = async (req, res) => {
     }
 
     try {
-        // Count all stories and done stories
         const totalStories = await Story.countDocuments({ projectId });
-        const doneStories = await Story.countDocuments({ 
-            projectId, 
-            status: { $in: ['Done', 'done'] } 
+        const doneStories = await Story.countDocuments({
+            projectId,
+            status: { $in: ['Done', 'done'] }
         });
 
         let newStatus = 'active';
@@ -108,14 +119,14 @@ export const updateProjectStatus = async (req, res) => {
             newStatus = 'completed';
         }
 
-        const project = await projectService.updateProjectService(projectId, { 
-            status: newStatus 
+        const project = await projectService.updateProjectService(projectId, {
+            status: newStatus
         });
 
-        return res.status(200).json({ 
-            success: true, 
+        return res.status(200).json({
+            success: true,
             data: project,
-            message: `Project status updated to: ${newStatus}` 
+            message: `Project status updated to: ${newStatus}`
         });
     } catch (err) {
         console.error('[updateProjectStatus]', err);
