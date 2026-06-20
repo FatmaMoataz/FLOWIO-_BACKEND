@@ -8,8 +8,8 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 
 // Imports للموديلات - تم إضافة موديل الشركة بنجاح 🌟
-import { User, validateForgotPassword, validatePasswordReset } from '../models/user.js';
-import { Company } from '../models/company.js'; 
+import { User, validateForgotPassword, validateVerifyOtp, validatePasswordReset } from '../models/user.js';
+import { Company } from '../models/company.js';
 import { RefreshToken } from '../models/refreshToken.model.js';
 
 import {
@@ -42,7 +42,7 @@ function validateSignup(data) {
     name: Joi.string().min(3).max(50).required(),
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required(),
-    company: Joi.string().min(2).max(50).required(), 
+    company: Joi.string().min(2).max(50).required(),
     role: Joi.string().valid('system-admin', 'project-manager', 'founder', 'team-member').optional(),
     specialization: Joi.string().valid('developer', 'designer', 'qa', 'none', 'Employee').optional()
   });
@@ -89,9 +89,9 @@ router.post('/signup', async (req, res) => {
     // 4. إنشاء الـ Company تلقائياً بناءً على الـ Dropdown المبعوث
     const newCompany = await Company.create({
       name: `${name}'s Workplace`,
-      industry: company, 
+      industry: company,
       subscriptionPlan: subscriptionPlanEnum.free,
-      userId: user._id 
+      userId: user._id
     });
 
     // 5. ربط الشركة بالـ User وحفظ التعديل
@@ -114,7 +114,7 @@ router.post('/signup', async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'Account and Company created successfully!',
-      token: accessToken,  
+      token: accessToken,
       data: {
         accessToken,
         refreshToken: rawRefreshToken,
@@ -123,7 +123,7 @@ router.post('/signup', async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
-          companyId: user.companyId, 
+          companyId: user.companyId,
           specialization: user.specialization
         }
       }
@@ -164,7 +164,7 @@ router.post('/login', async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      token: accessToken,  
+      token: accessToken,
       data: {
         accessToken,
         refreshToken: rawRefreshToken,
@@ -267,6 +267,7 @@ router.post('/logout-all', auth, async (req, res) => {
 
 // ========================================
 // 6️⃣  POST /api/auth/forgot-password
+//      الآن بيبعت كود OTP من 6 أرقام بالإيميل بدل اللينك
 // ========================================
 router.post('/forgot-password', async (req, res) => {
   try {
@@ -275,27 +276,27 @@ router.post('/forgot-password', async (req, res) => {
 
     const user = await User.findOne({ email: req.body.email.toLowerCase() });
 
-    if (!user) return res.status(200).json({ success: true, message: 'If email exists, a reset link has been sent.' });
+    // ميرجعش معلومة بتأكد وجود الإيميل من عدمه، حماية للخصوصية
+    if (!user) return res.status(200).json({ success: true, message: 'If this email exists, an OTP has been sent.' });
 
-    const resetToken = user.generatePasswordResetToken();
+    const otp = user.generatePasswordResetOTP();
     await user.save();
-
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: user.email,
-      subject: 'Password Reset Request — Flowio',
+      subject: 'Your Password Reset Code — Flowio',
       html: `
         <h2>Password Reset</h2>
         <p>Hello ${user.name},</p>
-        <p>Click below to reset your password:</p>
-        <p><a href="${resetUrl}"><strong>Reset Password</strong></a></p>
-        <p><strong>This link expires in 10 minutes.</strong></p>
+        <p>Your verification code is:</p>
+        <h1 style="letter-spacing: 8px;">${otp}</h1>
+        <p><strong>This code expires in 10 minutes.</strong></p>
+        <p>If you didn't request this, you can safely ignore this email.</p>
       `
     });
 
-    return res.status(200).json({ success: true, message: 'If email exists, a reset link has been sent.' });
+    return res.status(200).json({ success: true, message: 'If this email exists, an OTP has been sent.' });
   } catch (err) {
     console.error('[POST /auth/forgot-password]', err);
     return res.status(500).json({ success: false, message: 'Error: ' + err.message });
@@ -303,27 +304,56 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // ========================================
-// 7️⃣  POST /api/auth/reset-password
+// 7️⃣  POST /api/auth/verify-otp (جديد)
+//      بيتحقق من الكود من غير ما يغيّر الباسورد، علشان الفرونت يقدر
+//      يعدّي للخطوة اللي بعدها (إدخال باسورد جديد) فوراً
+// ========================================
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { error } = validateVerifyOtp(req.body);
+    if (error) return res.status(400).json({ success: false, message: error.details[0].message });
+
+    const { email, otp } = req.body;
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      passwordResetOTP: hashedOtp,
+      passwordResetExpires: { $gt: Date.now() }
+    });
+
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired code.' });
+
+    return res.status(200).json({ success: true, message: 'Code verified successfully.' });
+  } catch (err) {
+    console.error('[POST /auth/verify-otp]', err);
+    return res.status(500).json({ success: false, message: 'Error: ' + err.message });
+  }
+});
+
+// ========================================
+// 8️⃣  POST /api/auth/reset-password
+//      دلوقتي بياخد email + otp + newPassword بدل resetToken
 // ========================================
 router.post('/reset-password', async (req, res) => {
   try {
     const { error } = validatePasswordReset(req.body);
     if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
-    const { resetToken, newPassword } = req.body;
-
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const { email, otp, newPassword } = req.body;
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
 
     const user = await User.findOne({
-      passwordResetToken: hashedToken,
+      email: email.toLowerCase(),
+      passwordResetOTP: hashedOtp,
       passwordResetExpires: { $gt: Date.now() }
     });
 
-    if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired reset token.' });
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired code.' });
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
-    user.passwordResetToken = null;
+    user.passwordResetOTP = null;
     user.passwordResetExpires = null;
     await user.save();
 
@@ -361,7 +391,7 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // ========================================
-// 8️⃣  POST /api/auth/google (محدث لإنشاء شركة تلقائياً للمستخدمين الجدد)
+// 9️⃣  POST /api/auth/google (محدث لإنشاء شركة تلقائياً للمستخدمين الجدد)
 // ========================================
 router.post('/google', async (req, res) => {
   try {
@@ -373,9 +403,9 @@ router.post('/google', async (req, res) => {
     if (!user) {
       const defaultName = email.split('@')[0];
       user = new User({
-        name: defaultName,  
+        name: defaultName,
         email: email.toLowerCase(),
-        password: undefined, 
+        password: undefined,
         specialization: 'Employee',
         role: 'team-member'
       });
@@ -408,7 +438,7 @@ router.post('/google', async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Google authentication successful!',
-      token: accessToken,  
+      token: accessToken,
       data: {
         accessToken,
         refreshToken: rawRefreshToken,
