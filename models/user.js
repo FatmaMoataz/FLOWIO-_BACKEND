@@ -21,8 +21,8 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      // تم جعلها اختيارية لدعم حسابات Google Sign-In التي لا تمتلك كلمة مرور محلية
-      required: function() { return !this.googleId; }, 
+      // اختيارية لدعم حسابات Google Sign-In التي لا تمتلك كلمة مرور محلية
+      required: function() { return !this.googleId; },
       minlength: 6,
       maxlength: 1024
     },
@@ -42,7 +42,8 @@ const userSchema = new mongoose.Schema(
       ref: 'Company',
       default: null
     },
-    passwordResetToken: {
+    // مخزن مُشفّر (hash) لكود الـ OTP المكون من 6 أرقام، وليس الكود نفسه
+    passwordResetOTP: {
       type: String,
       default: null
     },
@@ -50,43 +51,44 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
-   avatar: {
-  type: String,
-  default: null,
-  trim: true,
-},
+    avatar: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   },
   {
-    timestamps: true 
+    timestamps: true
   }
 );
 
 // توليد الـ Access Token
 userSchema.methods.generateAuthToken = function () {
   const token = jwt.sign(
-    { 
-      _id: this._id, 
+    {
+      _id: this._id,
       role: this.role,
       companyId: this.companyId
     },
     process.env.JWT_PRIVATE_KEY,
-    { expiresIn: '15m' } // مدة قصيرة للأمان طالما يوجد Refresh Token
+    { expiresIn: '15m' }
   );
   return token;
 };
 
-// توليد توكن استعادة كلمة المرور
-userSchema.methods.generatePasswordResetToken = function () {
-  const resetToken = crypto.randomBytes(32).toString('hex');
-  
-  this.passwordResetToken = crypto
+// توليد كود OTP من 6 أرقام لاستعادة كلمة المرور
+// بنرجع الكود الصريح عشان نبعته بالإيميل، وبنخزن نسخة مُشفّرة فقط في الداتابيز
+userSchema.methods.generatePasswordResetOTP = function () {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  this.passwordResetOTP = crypto
     .createHash('sha256')
-    .update(resetToken)
+    .update(otp)
     .digest('hex');
-  
+
   this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 دقائق
-  
-  return resetToken;
+
+  return otp;
 };
 
 const User = mongoose.model('User', userSchema);
@@ -112,9 +114,25 @@ function validateForgotPassword(req) {
   return schema.validate(req);
 }
 
+// تحقق من الـ OTP بدون تغيير كلمة المرور (للخطوة 2 في الفرونت إند)
+function validateVerifyOtp(req) {
+  const schema = Joi.object({
+    email: Joi.string().min(5).max(255).required().email(),
+    otp: Joi.string().length(6).pattern(/^[0-9]+$/).required().messages({
+      'string.pattern.base': 'OTP must be a 6-digit number.',
+      'string.length': 'OTP must be exactly 6 digits.'
+    })
+  });
+  return schema.validate(req);
+}
+
 function validatePasswordReset(req) {
   const schema = Joi.object({
-    resetToken: Joi.string().required(),
+    email: Joi.string().min(5).max(255).required().email(),
+    otp: Joi.string().length(6).pattern(/^[0-9]+$/).required().messages({
+      'string.pattern.base': 'OTP must be a 6-digit number.',
+      'string.length': 'OTP must be exactly 6 digits.'
+    }),
     newPassword: Joi.string().min(6).max(255).required()
   });
   return schema.validate(req);
@@ -123,4 +141,5 @@ function validatePasswordReset(req) {
 export { User };
 export { validateUser as validate };
 export { validateForgotPassword };
+export { validateVerifyOtp };
 export { validatePasswordReset };
