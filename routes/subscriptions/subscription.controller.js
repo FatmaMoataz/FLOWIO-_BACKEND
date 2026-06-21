@@ -1,4 +1,5 @@
 import { Company } from '../../models/company.js';
+import { User } from '../../models/user.js';
 import { stripe } from '../../utils/stripe.js';
 import {
   createCheckoutSessionService,
@@ -11,7 +12,14 @@ export const createCheckoutSession = async (req, res) => {
   try {
     const { plan, billingCycle = 'monthly', seats = 1 } = req.body;
 
-    const company = await Company.findById(req.user.companyId);
+    // req.user (from the JWT payload) may only carry _id/role — companyId
+    // lives on the User document, not necessarily on the token itself.
+    const currentUser = await User.findById(req.user._id).select('companyId');
+    if (!currentUser?.companyId) {
+      return res.status(404).json({ success: false, message: 'No company linked to this account.' });
+    }
+
+    const company = await Company.findById(currentUser.companyId);
     if (!company) {
       return res.status(404).json({ success: false, message: 'Company not found.' });
     }
