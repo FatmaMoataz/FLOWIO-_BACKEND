@@ -14,7 +14,7 @@ import posts from './routes/posts.js';
 import polls from './routes/poll.js';
 import notifications from './routes/notification.js';
 import reportRoutes from './routes/report/report.routes.js';
-
+import subtaskRoutes from './routes/subtasks/subtask.routes.js';
 // Imports للـ Routes اللي كانت بتستدعى جوه الـ app.use مباشرة
 import companiesRoutes from './routes/companies.js';
 import communitiesRoutes from './routes/communities.js';
@@ -30,6 +30,8 @@ import meetingRoutes from './routes/meetings/meeting.routes.js';
 import boardRoutes from './routes/boards/board.routes.js';
 import archiveRoutes from './routes/archive/archive.routes.js';
 import activityRoutes from './routes/activityLogs/activityLog.routes.js';
+import storyRoutes from './routes/stories/story.routes.js';
+import subscriptionRoutes from './routes/subscriptions/subscription.route.js';
 
 
 const app = express();
@@ -93,8 +95,11 @@ import './models/refreshToken.model.js';
 import './models/board.model.js';
 import './models/chatSession.model.js';
 import './models/chatMessage.model.js';
+import './models/subtask.model.js';
+import './models/story.model.js';
 
 // Middlewares
+app.use('/api/subscriptions/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
@@ -135,6 +140,9 @@ app.use('/api/boards',      boardRoutes);
 app.use('/api/archive',     archiveRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/chat', (await import('./routes/chat/chat.routes.js')).default);
+app.use('/api/subtasks', subtaskRoutes);
+app.use('/api/stories', storyRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
