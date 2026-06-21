@@ -31,6 +31,7 @@ import boardRoutes from './routes/boards/board.routes.js';
 import archiveRoutes from './routes/archive/archive.routes.js';
 import activityRoutes from './routes/activityLogs/activityLog.routes.js';
 import storyRoutes from './routes/stories/story.routes.js';
+import subscriptionRoutes from './routes/subscriptions/subscription.route.js';
 
 const app = express();
 app.use(cors({
@@ -95,6 +96,7 @@ import './models/subtask.model.js';
 import './models/story.model.js';
 
 // Middlewares
+app.use('/api/subscriptions/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
@@ -136,6 +138,7 @@ app.use('/api/archive',     archiveRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/subtasks', subtaskRoutes);
 app.use('/api/stories', storyRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
