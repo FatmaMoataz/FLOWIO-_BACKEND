@@ -31,6 +31,7 @@ import boardRoutes from './routes/boards/board.routes.js';
 import archiveRoutes from './routes/archive/archive.routes.js';
 import activityRoutes from './routes/activityLogs/activityLog.routes.js';
 
+
 const app = express();
 app.use(cors({
   origin: '*',
@@ -90,6 +91,8 @@ import './models/meeting.model.js';
 import './models/meetingLog.model.js';
 import './models/refreshToken.model.js';
 import './models/board.model.js';
+import './models/chatSession.model.js';
+import './models/chatMessage.model.js';
 
 // Middlewares
 app.use(express.json());
@@ -131,6 +134,7 @@ app.use('/api/meetings',    meetingRoutes);
 app.use('/api/boards',      boardRoutes);
 app.use('/api/archive',     archiveRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/chat', (await import('./routes/chat/chat.routes.js')).default);
 
 if (app.get('env') === 'development') {
     app.use(morgan('tiny'));
