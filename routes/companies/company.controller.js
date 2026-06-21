@@ -1,6 +1,7 @@
-// إضافة امتداد .js للملفات والموديلات المحلية إجباري
 import companyService from './company.service.js';
 import { validateCompany, validateCompanyUpdate } from '../../models/company.js';
+import { getCompanyByIdService, updateCompanyService } from './company.service.js';
+
 
 export const createCompany = async (req, res) => {
     const { error } = validateCompany(req.body);
@@ -62,4 +63,30 @@ export const deleteCompany = async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
+};
+
+export const getMyCompany = async (req, res) => {
+  try {
+    const company = await getCompanyByIdService(req.user.companyId);
+    if (!company) {
+      return res.status(404).json({ success: false, message: 'Company not found.' });
+    }
+    return res.status(200).json({ success: true, data: company });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateMyCompany = async (req, res) => {
+  try {
+    const { error } = validateCompanyUpdate(req.body);
+    if (error) {
+      return res.status(400).json({ success: false, message: error.details[0].message });
+    }
+ 
+    const updated = await updateCompanyService(req.user.companyId, req.body);
+    return res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
 };

@@ -1,10 +1,26 @@
 import mongoose from 'mongoose';
 import Joi from 'joi';
 
+// CHANGED: renamed/extended to match the plan ids used by the onboarding UI
+// (was: free/basic/premium, which the frontend never sent and would have
+// failed Joi validation if it had).
 const subscriptionPlanEnum = {
     free: 'free',
-    basic: 'basic',
-    premium: 'premium'
+    starter: 'starter',
+    pro: 'pro',
+    enterprise: 'enterprise',
+};
+
+const billingCycleEnum = {
+    monthly: 'monthly',
+    yearly: 'yearly',
+};
+
+const subscriptionStatusEnum = {
+    none: 'none',
+    active: 'active',
+    past_due: 'past_due',
+    canceled: 'canceled',
 };
 
 const companySchema = new mongoose.Schema({
@@ -28,6 +44,32 @@ const companySchema = new mongoose.Schema({
         enum: Object.values(subscriptionPlanEnum),
         default: subscriptionPlanEnum.free,
     },
+    // NEW: needed so we know which Stripe price to bill / display
+    billingCycle: {
+        type: String,
+        enum: [...Object.values(billingCycleEnum), null],
+        default: null,
+    },
+    // NEW: drives Stripe subscription item quantity (per-seat pricing)
+    seats: {
+        type: Number,
+        default: 1,
+        min: 1,
+    },
+    // NEW: Stripe linkage
+    stripeCustomerId: {
+        type: String,
+        default: null,
+    },
+    stripeSubscriptionId: {
+        type: String,
+        default: null,
+    },
+    subscriptionStatus: {
+        type: String,
+        enum: Object.values(subscriptionStatusEnum),
+        default: subscriptionStatusEnum.none,
+    },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -45,7 +87,6 @@ const companySchema = new mongoose.Schema({
     toObject: { virtuals: true },
     toJSON: { virtuals: true }
 });
-//try catch for pre validate
 
 const Company = mongoose.model('Company', companySchema);
 
@@ -54,6 +95,8 @@ function validateCompany(company) {
         name: Joi.string().min(2).max(50).required(),
         industry: Joi.string().min(2).max(50).required(),
         subscriptionPlan: Joi.string().valid(...Object.values(subscriptionPlanEnum)).required(),
+        billingCycle: Joi.string().valid(...Object.values(billingCycleEnum)).optional().allow(null),
+        seats: Joi.number().min(1).optional(),
         userId: Joi.string().hex().length(24).optional(),
         teamId: Joi.string().hex().length(24).optional(),
         projectId: Joi.string().hex().length(24).optional()
@@ -67,6 +110,11 @@ function validateCompanyUpdate(company) {
         name: Joi.string().min(2).max(50),
         industry: Joi.string().min(2).max(50),
         subscriptionPlan: Joi.string().valid(...Object.values(subscriptionPlanEnum)),
+        billingCycle: Joi.string().valid(...Object.values(billingCycleEnum)).allow(null),
+        seats: Joi.number().min(1),
+        stripeCustomerId: Joi.string().allow(null),
+        stripeSubscriptionId: Joi.string().allow(null),
+        subscriptionStatus: Joi.string().valid(...Object.values(subscriptionStatusEnum)),
         userId: Joi.string().hex().length(24),
         teamId: Joi.string().hex().length(24),
         projectId: Joi.string().hex().length(24)
@@ -75,4 +123,11 @@ function validateCompanyUpdate(company) {
     return schema.validate(company);
 }
 
-export { Company, subscriptionPlanEnum, validateCompany, validateCompanyUpdate };
+export {
+    Company,
+    subscriptionPlanEnum,
+    billingCycleEnum,
+    subscriptionStatusEnum,
+    validateCompany,
+    validateCompanyUpdate,
+};
