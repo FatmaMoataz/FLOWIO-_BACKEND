@@ -10,9 +10,9 @@ export const getAllCompaniesService = async () => {
     return companies;
 };
 
-export const getCompanyByIdService = async (id) => {
-    return await Company.findById(id).populate('userId teamId projectId');
-};
+// export const getCompanyByIdService = async (id) => {
+//     return await Company.findById(id).populate('userId teamId projectId');
+// };
 
 // export const updateCompanyService = async (id, data) => {
 //     return await Company.findByIdAndUpdate(id, data, { new: true });
@@ -22,9 +22,9 @@ export const deleteCompanyService = async (id) => {
     return await Company.findByIdAndDelete(id);
 };
 
-// export const getCompanyByIdService = async (id) => {
-//   return await Company.findById(id);
-// };
+export const getCompanyByIdService = async (id) => {
+  return await Company.findById(id);
+};
  
 export const updateCompanyService = async (id, data) => {
   return await Company.findByIdAndUpdate(id, data, { new: true, runValidators: true });
