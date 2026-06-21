@@ -71,7 +71,7 @@ mongoose.connect(dbURI, {
     process.exit(1);  // Exit if DB connection fails
   });
 
-// Models Imports (لازم يستدعوا عشان الـ Schemas تتسجل في المونجوس)
+// Models Imports 
 import './models/user.js';
 import './models/epic.js';
 import './models/company.js';
@@ -106,7 +106,6 @@ app.use(express.static('public'));
 app.use(helmet());
 
 // ── Base Routes ────────────────────────────────────────────────────────────────
-// الدالة الترحيبية لمنع الـ 404 عند الدخول على الرابط الرئيسي مباشرة
 app.get('/', (req, res) => {
     res.status(200).json({
         success: true,
@@ -155,5 +154,4 @@ if (process.env.NODE_ENV !== 'production') {
     app.listen(port, () => console.log(`Flowio Server listening on port ${port}...`));
 }
 
-// Export default بدل module.exports عشان تناسب الـ ES6
 export default app;
