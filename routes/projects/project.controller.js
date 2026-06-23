@@ -13,6 +13,19 @@ export const createProject = async (req, res) => {
 
     try {
         const project = await projectService.createProjectService(req.body);
+
+        // ✅ Log activity for the creator
+        await logActivity({
+            userId: req.user._id,
+            performedBy: req.user._id,
+            type: 'project',
+            title: 'Project Created',
+            description: `You created the project "${project.name}".`,
+            targetId: project._id,
+            targetType: 'Project',
+            actionType: 'view_details'
+        });
+
         return res.status(201).json({ success: true, data: project });
     } catch (err) {
         console.error('[createProject]', err);
@@ -129,7 +142,16 @@ export const updateProjectStatus = async (req, res) => {
         // ✅ Log activity for all project members when project completes
         if (newStatus === 'completed') {
             const projectMembers = await projectMemberService.getMembersByProjectService(projectId);
-            
+            await logActivity({
+    userId: req.user._id,
+    performedBy: req.user._id,
+    type: 'project',
+    title: `Project Completed: ${project.name}`,
+    description: `All stories in "${project.name}" have been completed.`,
+    targetId: project._id,
+    targetType: 'Project',
+    actionType: 'view_details'
+});
             for (const member of projectMembers) {
                 if (member.user?.toString() !== req.user._id.toString()) {
                     await logActivity({
