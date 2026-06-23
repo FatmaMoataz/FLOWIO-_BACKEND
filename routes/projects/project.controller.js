@@ -100,6 +100,7 @@ export const deleteProject = async (req, res) => {
     }
 };
 
+// ── Update Project Status ─────────────────────────────────────────────────
 export const updateProjectStatus = async (req, res) => {
     const { projectId } = req.params;
 
@@ -122,6 +123,26 @@ export const updateProjectStatus = async (req, res) => {
         const project = await projectService.updateProjectService(projectId, {
             status: newStatus
         });
+
+        // ✅ Log activity for all project members when project completes
+        if (newStatus === 'completed') {
+            const projectMembers = await projectMemberService.getMembersByProjectService(projectId);
+            
+            for (const member of projectMembers) {
+                if (member.user?.toString() !== req.user._id.toString()) {
+                    await logActivity({
+                        userId: member.user || member.userId,
+                        performedBy: req.user._id,
+                        type: 'project',
+                        title: `Project Completed: ${project.name}`,
+                        description: `All stories in "${project.name}" have been completed.`,
+                        targetId: project._id,
+                        targetType: 'Project',
+                        actionType: 'view_details'
+                    });
+                }
+            }
+        }
 
         return res.status(200).json({
             success: true,

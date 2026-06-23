@@ -1,33 +1,9 @@
-// إضافة امتداد .js للملفات والموديلات المحلية إجباري
 import meetingService from './meeting.service.js';
 import * as aiService from './aiIntegration.service.js';
 import { validateMeeting, validateMeetingUpdate } from '../../models/meeting.model.js';
 import { logActivity } from '../activityLogs/activityLog.service.js';
 
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-
-// ── Create Meeting ─────────────────────────────────────────────────────────────
-export const createMeeting = async (req, res) => {
-    const { error } = validateMeeting(req.body);
-    if (error) {
-        return res.status(400).json({ success: false, errors: error.details.map(d => d.message) });
-    }
-
-    try {
-        const meeting = await meetingService.createMeetingService({
-            ...req.body,
-            createdBy: req.user._id
-        });
-
-        await logActivity(req.user._id, 'meeting', meeting._id, 'created',
-            `${req.user.name} created meeting '${meeting.title}'`);
-
-        return res.status(201).json({ success: true, data: meeting });
-    } catch (err) {
-        console.error('[createMeeting]', err);
-        return res.status(500).json({ success: false, message: err.message });
-    }
-};
 
 // ── Get All Meetings for a Project ─────────────────────────────────────────────
 export const getMeetingsByProject = async (req, res) => {
@@ -74,28 +50,6 @@ export const startMeeting = async (req, res) => {
     }
 };
 
-// ── End Meeting ────────────────────────────────────────────────────────────────
-export const endMeeting = async (req, res) => {
-    try {
-        const meeting = await meetingService.endMeetingService(req.params.id);
-        if (!meeting) {
-            return res.status(404).json({ success: false, message: 'Meeting not found.' });
-        }
-
-        await logActivity(req.user._id, 'meeting', meeting._id, 'updated',
-            `${req.user.name} ended meeting '${meeting.title}' (${meeting.duration} min)`);
-
-        return res.status(200).json({
-            success: true,
-            data: meeting,
-            message: 'Meeting ended. Upload audio to trigger AI processing.'
-        });
-    } catch (err) {
-        console.error('[endMeeting]', err);
-        return res.status(500).json({ success: false, message: err.message });
-    }
-};
-
 // ── Update Meeting ─────────────────────────────────────────────────────────────
 export const updateMeeting = async (req, res) => {
     if (!req.body || Object.keys(req.body).length === 0) {
@@ -133,7 +87,93 @@ export const deleteMeeting = async (req, res) => {
     }
 };
 
-// ── Upload Audio + Trigger AI ──────────────────────────────────────────────────
+export const getMeetingLog = async (req, res) => {
+    try {
+        const log = await meetingService.getMeetingLogService(req.params.id);
+        if (!log) {
+            return res.status(404).json({ success: false, message: 'Meeting log not found.' });
+        }
+        return res.status(200).json({ success: true, data: log });
+    } catch (err) {
+        console.error('[getMeetingLog]', err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+// ── Create Meeting ─────────────────────────────────────────────────────────
+export const createMeeting = async (req, res) => {
+    const { error } = validateMeeting(req.body);
+    if (error) {
+        return res.status(400).json({ success: false, errors: error.details.map(d => d.message) });
+    }
+
+    try {
+        const meeting = await meetingService.createMeetingService({
+            ...req.body,
+            createdBy: req.user._id
+        });
+
+        // ✅ Log activity for all attendees
+        if (meeting.attendees && meeting.attendees.length > 0) {
+            for (const attendee of meeting.attendees) {
+                // Don't log for the creator themselves
+                if (attendee.user?.toString() !== req.user._id.toString()) {
+                    await logActivity({
+                        userId: attendee.user || attendee,
+                        performedBy: req.user._id,
+                        type: 'meeting_summary',
+                        title: `New Meeting: ${meeting.title}`,
+                        description: `${req.user.name} invited you to a meeting.`,
+                        targetId: meeting._id,
+                        targetType: 'Meeting',
+                        actionType: 'view_details'
+                    });
+                }
+            }
+        }
+
+        return res.status(201).json({ success: true, data: meeting });
+    } catch (err) {
+        console.error('[createMeeting]', err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// ── End Meeting ────────────────────────────────────────────────────────────
+export const endMeeting = async (req, res) => {
+    try {
+        const meeting = await meetingService.endMeetingService(req.params.id);
+        if (!meeting) {
+            return res.status(404).json({ success: false, message: 'Meeting not found.' });
+        }
+
+        // ✅ Log summary-ready activity for all attendees
+        if (meeting.attendees && meeting.attendees.length > 0) {
+            for (const attendee of meeting.attendees) {
+                await logActivity({
+                    userId: attendee.user || attendee,
+                    performedBy: req.user._id,
+                    type: 'meeting_summary',
+                    title: `Meeting Summary Ready - ${meeting.title}`,
+                    description: `Meeting summary for "${meeting.title}" is being processed. Upload audio to complete.`,
+                    targetId: meeting._id,
+                    targetType: 'Meeting',
+                    actionType: 'view_summary'
+                });
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: meeting,
+            message: 'Meeting ended. Upload audio to trigger AI processing.'
+        });
+    } catch (err) {
+        console.error('[endMeeting]', err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// ── Process Audio (AI Summary Ready) ──────────────────────────────────────
 export const processAudio = async (req, res) => {
     if (!req.file) {
         return res.status(400).json({
@@ -153,9 +193,6 @@ export const processAudio = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Meeting not found.' });
         }
  
-        // ✅ SYNCHRONOUS — we wait for the full AI pipeline to finish
-        // This may take 1-5 minutes depending on audio length.
-        // The request stays open until Python responds.
         console.log(`[processAudio] Starting AI processing for meeting ${meetingId}...`);
  
         const result = await aiService.processAudioWithAI(
@@ -166,7 +203,22 @@ export const processAudio = async (req, res) => {
  
         console.log(`[processAudio] AI done. ${result.insertedTasks.length} tasks created.`);
  
-        // Fetch the saved log to return full data to frontend
+        // ✅ Log that AI summary is complete
+        if (meeting.attendees && meeting.attendees.length > 0) {
+            for (const attendee of meeting.attendees) {
+                await logActivity({
+                    userId: attendee.user || attendee,
+                    performedBy: req.user._id,
+                    type: 'meeting_summary',
+                    title: `AI Summary Complete - ${meeting.title}`,
+                    description: `Summary and ${result.insertedTasks.length} tasks extracted from the meeting.`,
+                    targetId: meeting._id,
+                    targetType: 'Meeting',
+                    actionType: 'view_summary'
+                });
+            }
+        }
+
         const log = await meetingService.getMeetingLogService(meetingId);
  
         return res.status(200).json({
@@ -187,17 +239,5 @@ export const processAudio = async (req, res) => {
             success: false,
             message: 'AI processing failed: ' + err.message
         });
-    }
-};
-export const getMeetingLog = async (req, res) => {
-    try {
-        const log = await meetingService.getMeetingLogService(req.params.id);
-        if (!log) {
-            return res.status(404).json({ success: false, message: 'Meeting log not found.' });
-        }
-        return res.status(200).json({ success: true, data: log });
-    } catch (err) {
-        console.error('[getMeetingLog]', err);
-        return res.status(500).json({ success: false, message: err.message });
     }
 };

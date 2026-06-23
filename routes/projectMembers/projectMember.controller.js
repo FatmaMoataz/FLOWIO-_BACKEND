@@ -1,42 +1,8 @@
-// إضافة امتداد .js للملفات والموديلات المحلية إجباري
 import projectMemberService from './projectMember.service.js';
 import { validateProjectMember, validateProjectMemberUpdate } from '../../models/projectMember.model.js';
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
-
-// ── Add Member to Project ──────────────────────────────────────────────────────
-export const addMember = async (req, res) => {
-    const { projectId } = req.params;
-
-    if (!isValidObjectId(projectId)) {
-        return res.status(400).json({ success: false, message: 'Invalid projectId in URL.' });
-    }
-
-    const { error } = validateProjectMember(req.body);
-    if (error) {
-        const messages = error.details.map(d => d.message);
-        return res.status(400).json({ success: false, errors: messages });
-    }
-
-    try {
-        const member = await projectMemberService.addMemberService({
-            ...req.body,
-            projectId // injected from URL — body cannot override
-        });
-        return res.status(201).json({ success: true, data: member });
-    } catch (err) {
-        // Handle duplicate — user already in this project
-        if (err.code === 11000) {
-            return res.status(409).json({
-                success: false,
-                message: 'This user is already a member of the project.'
-            });
-        }
-        console.error('[addMember]', err);
-        return res.status(500).json({ success: false, message: err.message });
-    }
-};
 
 // ── Get All Members of a Project ───────────────────────────────────────────────
 export const getMembersByProject = async (req, res) => {
@@ -105,6 +71,51 @@ export const removeMember = async (req, res) => {
         return res.status(200).json({ success: true, message: 'Member removed from project.' });
     } catch (err) {
         console.error('[removeMember]', err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// ── Add Member to Project ──────────────────────────────────────────────────
+export const addMember = async (req, res) => {
+    const { projectId } = req.params;
+
+    if (!isValidObjectId(projectId)) {
+        return res.status(400).json({ success: false, message: 'Invalid projectId in URL.' });
+    }
+
+    const { error } = validateProjectMember(req.body);
+    if (error) {
+        const messages = error.details.map(d => d.message);
+        return res.status(400).json({ success: false, errors: messages });
+    }
+
+    try {
+        const member = await projectMemberService.addMemberService({
+            ...req.body,
+            projectId
+        });
+        
+        // ✅ Log activity for the added member
+        await logActivity({
+            userId: req.body.user, // The user being added
+            performedBy: req.user._id,
+            type: 'project',
+            title: 'Added to Project',
+            description: `${req.user.name} added you to the project.`,
+            targetId: projectId,
+            targetType: 'Project',
+            actionType: 'view_details'
+        });
+        
+        return res.status(201).json({ success: true, data: member });
+    } catch (err) {
+        if (err.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: 'This user is already a member of the project.'
+            });
+        }
+        console.error('[addMember]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
 };
