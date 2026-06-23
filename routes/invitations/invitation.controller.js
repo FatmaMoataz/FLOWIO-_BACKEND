@@ -1,6 +1,15 @@
 import invitationService from './invitation.service.js';
 import { invitationStatusEnum } from '../../models/invitation.js';
-import { User } from '../../models/user.js'; // طلعنا الـ import فوق لـ clean architecture أفضل
+import { User } from '../../models/user.js';
+import nodemailer from 'nodemailer';
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,   // same vars your friend already uses
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
 
 export const createInvitation = async (req, res) => {
   try {
@@ -12,10 +21,27 @@ export const createInvitation = async (req, res) => {
     const token = invitationService.generateInvitationToken();
     const invitation = await invitationService.createInvitationService({
       emailInvited: req.body.emailInvited,
-      companyId: req.body.companyId, // التعديل بتاعك موجود هنا تمام وزي الفل
+      companyId: req.body.companyId,
       token,
       status: invitationStatusEnum.pending,
     });
+
+    // Send the email — fire and forget, don't block the response
+    const inviteUrl = `${process.env.FRONTEND_URL}/invite/accept/${token}`;
+    transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: invitation.emailInvited,
+      subject: "You've been invited to Flowio",
+      html: `
+        <h2>You're invited!</h2>
+        <p>Click the link below to join your team on Flowio.</p>
+        <a href="${inviteUrl}" style="padding:12px 24px;background:#245df5;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">
+          Accept Invitation
+        </a>
+        <p>This link expires in <strong>24 hours</strong>.</p>
+        <p style="color:#888;font-size:12px">If you didn't expect this, you can safely ignore it.</p>
+      `,
+    }).catch(err => console.error('[invitation email]', err));
 
     res.status(201).json({ success: true, data: invitation });
   } catch (error) {
