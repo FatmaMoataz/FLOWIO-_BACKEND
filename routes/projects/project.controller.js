@@ -1,6 +1,8 @@
 import projectService from './project.service.js';
 import { validateProject, validateProjectUpdate } from '../../models/project.model.js';
 import { Story } from '../../models/story.model.js';
+import projectMemberService from '../projectMembers/projectMember.service.js'; // ✅ add this
+import { logActivity } from '../activityLogs/activityLog.service.js'; 
 
 export const createProject = async (req, res) => {
     const { error } = validateProject(req.body);

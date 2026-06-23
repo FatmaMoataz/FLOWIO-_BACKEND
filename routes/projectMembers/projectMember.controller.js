@@ -1,5 +1,6 @@
 import projectMemberService from './projectMember.service.js';
 import { validateProjectMember, validateProjectMemberUpdate } from '../../models/projectMember.model.js';
+import { logActivity } from '../activityLogs/activityLog.service.js'; // ✅ add this
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);

@@ -1,6 +1,7 @@
 import { Story } from '../../models/story.model.js';
 import { Subtask } from '../../models/subtask.model.js';
 import { validateStory, validateStoryUpdate } from '../../models/story.model.js';
+import { logActivity } from '../activityLogs/activityLog.service.js';
 
 // ── Get Stories by Project ─────────────────────────────────────────────────
 export const getStoriesByProject = async (req, res) => {
