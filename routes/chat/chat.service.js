@@ -127,7 +127,7 @@ const sendMessageService = async (projectId, userId, messageText) => {
                 throw new Error('JAIS returned non-JSON. Is the ngrok tunnel running?');
             }
 
-            aiReplyText = response.data.response;
+            aiReplyText = response.data.response || response.data.answer;
             if (!aiReplyText) {
                 throw new Error('JAIS response missing "response" field: ' + JSON.stringify(response.data));
             }
