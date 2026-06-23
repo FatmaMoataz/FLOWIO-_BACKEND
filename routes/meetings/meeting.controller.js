@@ -1,4 +1,4 @@
-import meetingService from './meeting.service.js';
+import * as meetingService from './meeting.service.js';
 import * as aiService from './aiIntegration.service.js';
 import { validateMeeting, validateMeetingUpdate } from '../../models/meeting.model.js';
 import { logActivity } from '../activityLogs/activityLog.service.js';
@@ -32,6 +32,45 @@ export const getMeetingById = async (req, res) => {
         return res.status(200).json({ success: true, data: meeting });
     } catch (err) {
         console.error('[getMeetingById]', err);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// ── Create Meeting ─────────────────────────────────────────────────────────
+export const createMeeting = async (req, res) => {
+    const { error } = validateMeeting(req.body);
+    if (error) {
+        return res.status(400).json({ success: false, errors: error.details.map(d => d.message) });
+    }
+
+    try {
+        const meeting = await meetingService.createMeetingService({
+            ...req.body,
+            createdBy: req.user._id
+        });
+
+        // ✅ Log activity for all attendees
+        if (meeting.attendees && meeting.attendees.length > 0) {
+            for (const attendee of meeting.attendees) {
+                // Don't log for the creator themselves
+                if (attendee.user?.toString() !== req.user._id.toString()) {
+                    await logActivity({
+                        userId: attendee.user || attendee,
+                        performedBy: req.user._id,
+                        type: 'meeting_summary',
+                        title: `New Meeting: ${meeting.title}`,
+                        description: `${req.user.name} invited you to a meeting.`,
+                        targetId: meeting._id,
+                        targetType: 'Meeting',
+                        actionType: 'view_details'
+                    });
+                }
+            }
+        }
+
+        return res.status(201).json({ success: true, data: meeting });
+    } catch (err) {
+        console.error('[createMeeting]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
 };
@@ -87,6 +126,7 @@ export const deleteMeeting = async (req, res) => {
     }
 };
 
+// ── Get Meeting Log ────────────────────────────────────────────────────────────
 export const getMeetingLog = async (req, res) => {
     try {
         const log = await meetingService.getMeetingLogService(req.params.id);
@@ -96,44 +136,6 @@ export const getMeetingLog = async (req, res) => {
         return res.status(200).json({ success: true, data: log });
     } catch (err) {
         console.error('[getMeetingLog]', err);
-        return res.status(500).json({ success: false, message: err.message });
-    }
-};
-// ── Create Meeting ─────────────────────────────────────────────────────────
-export const createMeeting = async (req, res) => {
-    const { error } = validateMeeting(req.body);
-    if (error) {
-        return res.status(400).json({ success: false, errors: error.details.map(d => d.message) });
-    }
-
-    try {
-        const meeting = await meetingService.createMeetingService({
-            ...req.body,
-            createdBy: req.user._id
-        });
-
-        // ✅ Log activity for all attendees
-        if (meeting.attendees && meeting.attendees.length > 0) {
-            for (const attendee of meeting.attendees) {
-                // Don't log for the creator themselves
-                if (attendee.user?.toString() !== req.user._id.toString()) {
-                    await logActivity({
-                        userId: attendee.user || attendee,
-                        performedBy: req.user._id,
-                        type: 'meeting_summary',
-                        title: `New Meeting: ${meeting.title}`,
-                        description: `${req.user.name} invited you to a meeting.`,
-                        targetId: meeting._id,
-                        targetType: 'Meeting',
-                        actionType: 'view_details'
-                    });
-                }
-            }
-        }
-
-        return res.status(201).json({ success: true, data: meeting });
-    } catch (err) {
-        console.error('[createMeeting]', err);
         return res.status(500).json({ success: false, message: err.message });
     }
 };

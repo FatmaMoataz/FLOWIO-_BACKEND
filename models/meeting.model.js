@@ -100,3 +100,4 @@ function validateMeetingUpdate(data) {
 }
 
 export { Meeting, meetingStatusEnum, validateMeeting, validateMeetingUpdate };
+export default Meeting;

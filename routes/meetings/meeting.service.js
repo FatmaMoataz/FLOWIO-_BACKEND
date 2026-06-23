@@ -12,7 +12,7 @@ const MEETING_POPULATE = [
 // ── Create Meeting ─────────────────────────────────────────────────────────────
 export const createMeetingService = async (data) => {
     const roomId = uuidv4(); // unique room ID for WebRTC
-    const meeting_link = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/meeting/${roomId}`;
+    const meeting_link = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/meeting/${roomId}`;
 
     const meeting = await Meeting.create({ ...data, roomId, meeting_link });
 
@@ -87,7 +87,7 @@ export const getMeetingLogService = async (meetingId) => {
         .populate('extracted_tasks.taskId', 'title status');
 };
 
-// عمل export default هنا أيضاً ليسهل استدعاؤه ككائن موحد في الـ controller
+// Default export for convenience
 export default {
     createMeetingService,
     getMeetingsByProjectService,
